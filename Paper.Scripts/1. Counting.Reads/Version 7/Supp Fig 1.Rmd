@@ -1,0 +1,130 @@
+# read in files
+```{r setup}
+library(readr)
+library(lme4)
+library(knitr)
+library(splines)
+library(yangR)
+library(data.table)
+library(ggplot2)
+
+wd <- '/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/'
+
+setwd(wd)
+opts_knit$set(root.dir = wd)
+
+sra_run_table <- read.csv('data_files/SraRunTable.txt', header = T, sep = '\t')
+sra_run_table <- subset(sra_run_table, Assay_Type == 'WGS')
+
+sra_run_table_gtex_and_run <- sra_run_table
+
+# these MT stats are from the new remapped bams (after MToolbox NUMT removal).  this file was made with this script: /dcs01/arking/arkinglab/active/projects/GTeX/syang/data_files/MT_stats/getting_MT_stats.Rmd
+all_MT_stats <- read.csv('data_files/MT_stats/your_MT_stats.csv')
+```
+
+# filtering based on phenotypes
+```{r}
+indiv_count <- as.data.frame(matrix(nrow = 1, ncol = 2))
+colnames(indiv_count) <- c('Number.removed', 'Reason.for.removal')
+indiv_count[1,] <- c(nrow(all_MT_stats), 'Started with')
+
+# merge the MT_stats run info with the GTEx subject ID
+all_MT_stats_with_GTEx <- merge(all_MT_stats, sra_run_table_gtex_and_run, all.x = T, by.x = 'run', by.y = 'Run')
+any(is.na(all_MT_stats_with_GTEx$submitted_subject_id))
+
+# take out all mtDNA-CNs obtained not from blood (13)
+only_whole_blood <- subset(all_MT_stats_with_GTEx, histological_type == 'Blood')
+indiv_count <- rbind(indiv_count, c(nrow(subset(all_MT_stats_with_GTEx, histological_type != 'Blood')), 'Not blood'))
+
+# you're missing two people! whose bams did not go through.
+
+only_whole_blood2 <- only_whole_blood
+
+align_indices <- getAllDups(only_whole_blood2$total_reads)
+only_whole_blood2$total_reads[align_indices]
+
+if(length(align_indices) != 0){only_whole_blood3 <- only_whole_blood2[-align_indices,]} else{ only_whole_blood3 <- only_whole_blood2}
+
+only_whole_blood3$unalign_percent <- only_whole_blood3$unaligned_counts/only_whole_blood3$total_reads * 100
+
+indiv_count <- rbind(indiv_count, c(length(align_indices), 'Same counts as other samples'))
+
+# take out samples with high unaligned percentages (7)
+cutoff <- mean(na.omit(only_whole_blood3$unalign_percent)) + 4*sd(na.omit(only_whole_blood3$unalign_percent))
+# 
+high_unaligned <- which(only_whole_blood3$unalign_percent > cutoff)
+only_whole_blood3[high_unaligned,]
+nrow(only_whole_blood3[high_unaligned,])
+only_whole_blood4 <- only_whole_blood3[-high_unaligned,]
+
+indiv_count <- rbind(indiv_count, c(length(high_unaligned), 'High unaligned percent (> 4 SD)'))
+
+# take out people who are outliers in MT count
+cutoff <- mean(na.omit(only_whole_blood4$mito_percents)) + 4*sd(na.omit(only_whole_blood4$mito_percents))
+high_unaligned <- which(only_whole_blood4$mito_percents > cutoff)
+only_whole_blood4[high_unaligned,]
+nrow(only_whole_blood4[high_unaligned,])
+only_whole_blood5 <- only_whole_blood4[-high_unaligned,]
+
+indiv_count <- rbind(indiv_count, c(length(high_unaligned), 'Outliers in mito percent (> 4 SD)'))
+indiv_count.save <- indiv_count
+plot(density(only_whole_blood5$mito_percents))
+```
+
+# add phenotype information (subject AND sample level)
+```{r}
+# SUBJECT
+getwd()
+phenotype <- read_delim("/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/data_files/GTEx_v7_Subject_Phenotypes.GRU.n635_AnalysisFreeze.txt", "\t", escape_double = FALSE, trim_ws = TRUE)
+
+'%!in%' <- Negate('%in%')
+no.subj.phenos <- which(only_whole_blood4$submitted_subject_id %!in% phenotype$SUBJID)
+no.subj.phenos <- only_whole_blood4[no.subj.phenos,]
+no.subj.phenos$submitted_subject_id # you must have downloaded the wrong thing.
+
+```
+
+# wgs filtering
+```{r}
+with.adjust.pheno <- merge(only_whole_blood4, phenotype, by.x = 'submitted_subject_id', by.y = 'SUBJID')
+indiv_count <- rbind(indiv_count, c((nrow(only_whole_blood4) - nrow(with.adjust.pheno)), 'Not in phenotype file'))
+
+# SAMPLE
+dat <- read.table("/Volumes/JHPCE/dcs01/resources/GTeX/dbGaP_GTeX_phs000424.v7.p2/GTEx_v7_Annotations_SampleAttributesDS.txt",
+                      header=TRUE,stringsAsFactors=FALSE,sep="\t",fill=TRUE,
+                      quote="")
+dat.wgs <- subset(dat, SMAFRZE == 'WGS')
+dat.wgs <- subset(dat.wgs, SMTSD == 'Whole Blood')
+splitted <- strsplit(dat.wgs$SAMPID, split = '\\-')
+all.names <- sapply(splitted, "[[", 2)
+dat.wgs$SUBJID <- paste0('GTEX-', all.names)
+colnames(dat.wgs) <- paste0('wgs.', colnames(dat.wgs))
+
+with.adjust.pheno <- merge(with.adjust.pheno, dat.wgs, by.y = 'wgs.SUBJID', by.x = 'submitted_subject_id')
+
+save(with.adjust.pheno, file = 'with.adjust.pheno.rds')
+```
+
+# fix the date
+```{r}
+with.adjust.pheno$wgs.SMNABTCHD.date <- as.POSIXct(strptime(with.adjust.pheno$wgs.SMNABTCHD,format="%m/%d/%Y"))
+
+
+with.adjust.pheno$`Date Bin` <- '04-2012 - 01-2013'
+with.adjust.pheno$`Date Bin`[which(with.adjust.pheno$wgs.SMNABTCHD.date > '2013-01-01 EST')] <- 'After 01-2013'
+with.adjust.pheno$`Date Bin`[which(with.adjust.pheno$wgs.SMNABTCHD.date < '2012-04-01 EST')] <- 'Before 04-2012'
+```
+
+# visualize mito percent by date. 
+```{r}
+# colorblind-friendly palette from here: https://www.datanovia.com/en/blog/ggplot-colors-best-tricks-you-will-love/#use-a-colorblind-friendly-palette
+cbp1 <- c("#999999", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+ggplot(with.adjust.pheno, aes(wgs.SMNABTCHD.date, mito_percents, col = `Date Bin`)) + geom_point() + xlab('Date of nucleic acid extraction') + ylab('Unadjusted mtDNA-CN') + theme_classic()+ scale_colour_manual(values=cbp1)
+
+
+ggplot(with.adjust.pheno, aes(wgs.SMNABTCHD.date, mito_percents, col = `Date Bin`)) + geom_point() + xlab('Date of nucleic acid extraction') + ylab('Unadjusted mtDNA-CN') + theme_bw()+ scale_colour_manual(values=cbp1)
+```
+
+
