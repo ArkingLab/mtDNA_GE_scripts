@@ -1,0 +1,65 @@
+# 3.6.2020
+
+# This script will show the lambdas obtained from permutation along with actual lambdas for each tissue
+
+# It will also make a table for this
+```{r setup}
+library(data.table)
+library(knitr)
+wdir <- paste0('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/')
+setwd(wdir)
+opts_knit$set(root.dir = wdir)
+```
+
+```{r}
+load('R_objects/all.lambdas.rds') # made here: 
+load('R_objects/lambda.frame.rds') 
+
+library(ggplot2)
+ggplot(all.lambdas, aes(Lambda)) + geom_density() + geom_rug() + geom_rug(data = lambda.frame, aes(Lambda), col = 'blue') + geom_density(data = lambda.frame, aes(Lambda), col = 'blue') + geom_vline(xintercept = all.lambdas$Lambda[nrow(all.lambdas)*0.05], col = 'red')
+
+sig <- subset(lambda.frame, Lambda > all.lambdas$Lambda[nrow(all.lambdas)*0.05])
+nrow(sig)
+```
+# table time
+```{r}
+library(htmlTable)
+lambda.frame = na.omit(lambda.frame)
+lambda.frame$Lambda <- formatC(lambda.frame$Lambda, digits = 3) 
+
+
+htmlTable(lambda.frame, header = c('Tissue', 'Lambda'), rnames = rep('', nrow(lambda.frame)))
+
+         
+```
+
+# Dan says: Maybe add some labels for the more extreme results? And maybe drop blood (and just note its value in the legend), since this results in too much clustering at the lower end? 
+
+```{r}
+lambda.frame$Test <- 'Observed results'
+all.lambdas$Test <- 'Permutation results'
+
+# drop blood: 
+# no.blood = subset(lambda.frame, Tissue != 'Whole Blood')
+no.blood = lambda.frame
+l = ggplot(all.lambdas, aes(Lambda)) + geom_density(fill = 'black') + geom_rug() + geom_rug(data = lambda.frame, aes(Lambda), col = 'blue') + geom_density(data = no.blood, aes(Lambda), col = 'blue', fill = 'blue') + geom_vline(xintercept = all.lambdas$Lambda[nrow(all.lambdas)*0.05], col = 'red')
+
+one.data <- rbind(all.lambdas, no.blood)
+
+l = ggplot(one.data, aes(Lambda, fill = Test)) + geom_rug(aes(col = Test)) + geom_density(aes(fill = Test)) + geom_vline(xintercept = all.lambdas$Lambda[nrow(all.lambdas)*0.05], col = 'red')
+
+# labs <- subset(no.blood, Tissue %in% c('Brain - Putamen (basal ganglia)', 'Cells - EBV-transformed lymphocytes', 'Cells - Cultured fibroblasts'))
+
+labs <- subset(no.blood, Tissue %in% c('Brain - Putamen (basal ganglia)'))
+labs2 <- subset(no.blood, Tissue %in% c('Whole Blood'))
+labs = subset(no.blood, Lambda > 3)
+
+cbp1 <- c("#999999", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+l + geom_text(data = labs, aes(Lambda, y = 2, label = Tissue, vjust = -0.5), angle = 90, col = 'black') + geom_vline(xintercept = labs$Lambda, lty = 2, colour = "gray50") + labs(fill = 'Result type', col = NULL) + theme_classic() + scale_color_manual(values = cbp1, guide = 'none') + scale_fill_manual(values = cbp1)
+
+
+one.data = one.data[-which(is.na(one.data$Lambda)),]
+
+```

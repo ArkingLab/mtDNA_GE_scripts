@@ -1,0 +1,183 @@
+# Modified 5.18.2020 to add estimates for transcription factors
+# Modified 4.24.2020 to include forestplot of mt genes for supplement.
+# Modified 4.20.2020 to include genes in splicing/ubiquitin pathway
+# Modified 4.1.2020
+# 3.4.2020
+
+# This script will look at associations between mtDNA-CN and genes of interest
+# Genes of interest from this paper: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5799321/
+
+# load with.gene.rds
+```{r}
+load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/Whole Blood/with.gene.rds')
+
+
+with.gene[grep('^PPARGC1A$', with.gene$symbol),]
+
+# pure replication genes:
+polg <- with.gene[grep('^POLG$', with.gene$symbol),]
+polg2 <- with.gene[grep('^POLG2$', with.gene$symbol),]
+twnk <- with.gene[grep('TWNK', with.gene$symbol),]
+ssbp1 <- with.gene[grep('SSBP1', with.gene$symbol),]
+primpol <- with.gene[grep('PRIMPOL', with.gene$symbol),]
+dna2 <- with.gene[grep('DNA2', with.gene$symbol),]
+mgme1 <- with.gene[grep('MGME1', with.gene$symbol),]
+rnaseh <- with.gene[grep('^RNASEH1$', with.gene$symbol),]
+
+# mtDNA transcription genes:
+tfam <- with.gene[grep('TFAM', with.gene$symbol),]
+tefm <- with.gene[grep('TEFM', with.gene$symbol),]
+tfb2m <- with.gene[grep('TFB2M', with.gene$symbol),]
+polrmt <- with.gene[grep('^POLRMT$', with.gene$symbol),]
+
+# nucleotide metabolism genes:
+tk2 <- with.gene[grep('^TK2', with.gene$symbol),]
+dguok <- with.gene[grep('^DGUOK$', with.gene$symbol),]
+rrm2b <- with.gene[grep('RRM2B', with.gene$symbol),]
+tymp <- with.gene[grep('TYMP', with.gene$symbol),]
+slc <- with.gene[grep('^SLC25A4$', with.gene$symbol),]
+
+lonp <- with.gene[grep('^LONP1$', with.gene$symbol),]
+
+load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_objects/rna.dna.cor.SCALED.rds')
+blood <- subset(rna.dna.cor, Tissue == 'Whole Blood')
+blood$symbol <- 'Scaled mtRNA median'
+
+
+all.mt.reg <- plyr::rbind.fill(blood, polg, polg2, twnk, ssbp1, primpol, dna2, mgme1, rnaseh, tfam, tefm, tfb2m, polrmt, tk2, dguok, rrm2b, tymp, slc)
+
+important <- dplyr::select(all.mt.reg, symbol, beta, SE, pval)
+library(knitr)
+knitr::kable(important)
+```
+
+# wanna make fancy tables
+```{r}
+important.save <- important
+important$beta <- formatC(important$beta, format = "e", digits = 2)
+important$SE <-formatC(important$SE, format = "e", digits = 2)
+important$pval <-ifelse(important$pval > 0.001, format(round(important$pval, 3), nsmall = 3), formatC(important$pval, format = "e", digits = 2))
+
+
+important2 <- important[order(important$pval, decreasing = F),]
+
+library(stargazer)
+library(kableExtra)
+kable_styling(kable(important, row.names = F), full_width = F)
+kable_styling(kable(important2, row.names = F), full_width = F)
+```
+
+# use htmlTable
+```{r}
+library(htmlTable)
+output <- 
+  matrix(paste("Content", LETTERS[1:16]), 
+         ncol=3, byrow = TRUE)
+
+library(htmlTable)
+htmlTable(important,
+          header =  c('Gene', '&emsp;&emsp;&emsp;Effect estimate&emsp;&emsp;&emsp;', 'Standard error', '&emsp;P-value&emsp;'),
+          rnames = rep('', nrow(important)),
+          rgroup = c('', "mtDNA replication machinery",
+                     "mtDNA transcription machinery",
+                     "Nucleotide metabolism genes"),
+          n.rgroup = c(1,8,4,4),
+          tfoot="&dagger; Genes from Rusecka et. al", compatability = 'htmlTableCompat')
+
+```
+
+# show genes splice/ubq
+```{r}
+library(qusage)
+kegg.sets <- read.gmt('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/GO_enrich/MsigDB/c2.cp.kegg.v7.0.symbols.gmt')
+
+grep('^KEGG_SPLICEOSOME$', names(kegg.sets))
+grep('^KEGG_UBIQUITIN_MEDIATED_PROTEOLYSIS$', names(kegg.sets))
+spl.genes <- kegg.sets[[77]]
+ubq.genes <- kegg.sets[[96]]
+
+spl <- subset(with.gene, symbol %in% spl.genes)
+ubq <- subset(with.gene, symbol %in% ubq.genes)
+
+ggplot(spl, aes(-log10(pval))) + geom_rug() + geom_density()
+ggplot(ubq, aes(-log10(pval))) + geom_rug() + geom_density()
+
+show <- rbind(head(spl,5), head(ubq, 5))
+
+important <- dplyr::select(show, symbol, beta, SE, pval)
+important$beta <- formatC(important$beta, format = "e", digits = 2)
+important$SE <-formatC(important$SE, format = "e", digits = 2)
+important$pval <-ifelse(important$pval > 0.001, format(round(important$pval, 3), nsmall = 3)
+, formatC(important$pval, format = "e", digits = 2))
+
+htmlTable(important,
+          header =  c('Gene', '&emsp;&emsp;&emsp;Effect estimate&emsp;&emsp;&emsp;', 'Standard error', '&emsp;P-value&emsp;'),
+          rnames = rep('', nrow(important)),
+          rgroup = c('Spliceosome genes', "Ubiquitin-mediated proteolysis genes"),
+          n.rgroup = c(5,5))
+```
+
+# show tf (transcription factor) effects + grab enrichment score:
+```{r}
+load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/Whole Blood/all.tft.rds')
+all.tft.sets$se = as.numeric(all.tft.sets$Beta) - (1.96*as.numeric(all.tft.sets$Confint.Upper))
+
+tf.scores = head(dplyr::select(all.tft.sets, Gene.Set.Name, T.test.pval, Beta, se), 15)
+tf.scores = tf.scores[c(1:3, 5, 8),]
+tf.scores$tf = c('ELK1', 'NRF1', 'GABPB', 'YY1', 'E4F1')
+
+tfs = with.gene[which(with.gene$symbol %in% c('ELK1', 'NRF1', 'YY1', 'GABPB1', 'GABPB2', 'E4F1')),]
+tfs$tf = c('GABPB', 'YY1', 'E4F1', 'ELK1', 'GABPB', 'NRF1')
+
+tfs = merge(tfs, tf.scores, by = 'tf')
+
+important <- dplyr::select(tfs, symbol, beta, SE, pval, T.test.pval)
+important$beta <- formatC(important$beta, format = "e", digits = 2)
+important$SE <- formatC(important$SE, format = "e", digits = 2)
+important$pval <-ifelse(important$pval > 0.001, format(round(important$pval, 3), nsmall = 3)
+, formatC(important$pval, format = "e", digits = 2))
+
+important$T.test.pval <-ifelse(important$T.test.pval > 0.001, format(round(important$T.test.pval, 3), nsmall = 3)
+, formatC(important$T.test.pval, format = "e", digits = 2))
+
+important = important[order(important$T.test.pval),]
+
+htmlTable(important,
+          header =  c('Gene', 'Effect estimate <br>&emsp;(gene expression)&emsp;', 'Standard error <br>&emsp;(gene expression)&emsp;',  'P-value <br>&emsp;(gene expression)&emsp;', "P-value <br>&emsp;(enriched target sequences)&emsp;"),
+          rnames = rep('', nrow(important)))
+```
+
+
+
+# make a forestplot with all indiv genes
+```{r}
+mt <- with.gene[grep('^MT-', with.gene$symbol),]
+
+require(forestplot)
+require(meta)
+
+# get means and upper/lower limits
+means <- mt$beta
+upper <- mt$beta+mt$SE
+lower <- mt$beta-mt$SE
+
+# formatting
+means <- c(NA, NA, NA, means, NA)
+upper <- c(NA, NA, NA, upper, NA)
+lower <- c(NA, NA, NA, lower, NA)
+
+# create table text
+text <-cbind(c("36 MT-encoded genes in whole blood", NA, "Genes", mt$symbol, NA), c(NA, NA,"Effect estimate", formatC(mt$beta, format = "e", digits = 2), NA))
+
+	# draw forestplot
+pdf(paste0('~/Desktop/Nice.Screenshots/mtrna.forestplot.pdf'), width = 10, height = 8, onefile = F)
+	forestplot(text, means, lower, upper, col=fpColors(box="royalblue",line="darkblue", summary="royalblue"), is.summary=c(TRUE, FALSE, TRUE, rep(FALSE, nrow(mt)+1), TRUE),
+       txt_gp = fpTxtGp(ticks=gpar(cex=0.9)))
+dev.off()
+
+mt.care <- dplyr::select(mt, symbol, beta, pval)
+mt.care$beta <- formatC(mt.care$beta, format = "e", digits = 2)
+mt.care$pval <- formatC(mt.care$pval, format = "e", digits = 2)
+
+kable_styling(kable(mt.care, row.names = F), full_width = F)
+```

@@ -1,0 +1,44 @@
+# 6.1.2020
+
+# This will show the percent positive shift
+```{r}
+load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_objects/permute.pos.blood1000.rds')
+library(ggplot2)
+library(yangR)
+subset(permute.pos, tissue == 'Whole Blood') -> blood
+
+# ggplot(blood, aes(percent.pos)) + geom_density() + geom_rug()
+
+load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/Whole Blood/with.gene.rds')
+with.gene$Pos = ifelse(with.gene$beta > 0, 1, 0)
+sig = subset(with.gene, pval < 0.05)
+table(sig$Pos)
+
+blood$annot = 'Permutation'
+actual = c('Whole Blood', 0.9629882, 'Observed')
+
+w.actual = rbind(blood, actual)
+
+w.actual$percent.pos = as.numeric(w.actual$percent.pos)
+
+l = ggplot(w.actual, aes(percent.pos)) + geom_rug() + geom_density(fill = 'lightblue') 
+labs <- subset(w.actual, annot =='Observed')
+
+l + geom_text(data = labs, aes(percent.pos, y = 2, label = annot, vjust = -0.5), angle = 90, col = 'black') + geom_vline(xintercept = labs$percent.pos, lty = 2, colour = "gray50") + xlab('Percent of nominally significant genes with positive effect sizes')
+
+blood$percent.pos = as.numeric(blood$percent.pos)
+
+
+cbp1 <- c("#999999", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+p = ggplot(blood, aes(percent.pos)) + geom_rug() + geom_density(fill = cbp1[1]) 
+
+
+cbp1 <- c("#999999", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+# pdf('/dcs01/arking/arkinglab/active/projects/GTeX/syang/look.version8/shift2.pdf', width = 8, height = 5)
+p + geom_text(data = labs, aes(percent.pos, y = 2, label = annot, vjust = -0.5), angle = 90, col = 'black') + geom_vline(xintercept = labs$percent.pos, lty = 2, colour = "gray50") + xlab('Percent of nominally significant genes with positive effect estimates') + scale_x_continuous(breaks = seq(0,1,0.1), limits = c(0,1)) + theme_classic() + scale_colour_manual(values=cbp1)
+# dev.off()
+```

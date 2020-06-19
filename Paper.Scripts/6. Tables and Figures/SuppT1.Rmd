@@ -1,0 +1,29 @@
+# 5.28.2020
+# This script will look at mtRNA-mtDNA correlations in multiple tissues
+
+# load data
+```{r}
+load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_objects/rna.dna.cor.SCALED.rds')
+```
+
+# htmlTables
+```{r}
+important = rna.dna.cor
+
+important2 <- important[order(important$pval, decreasing = F),]
+
+important = dplyr::select(important2, Tissue, beta, SE, pval)
+important$beta <- formatC(important$beta, format = "e", digits = 2)
+important$SE <-formatC(important$SE, format = "e", digits = 2)
+important$pval <-ifelse(important$pval > 0.001, format(round(important$pval, 3), nsmall = 3)
+, formatC(important$pval, format = "e", digits = 2))
+
+library(htmlTable)
+output <- 
+  matrix(paste("Content", LETTERS[1:16]), 
+         ncol=3, byrow = TRUE)
+
+library(htmlTable)
+htmlTable(important,
+          header =  c('Tissue', '&emsp;&emsp;Effect estimate&emsp;&emsp;', 'Standard error', '&emsp;&emsp;P-value&emsp;&emsp;'), rnames = rep('', nrow(important)))
+```

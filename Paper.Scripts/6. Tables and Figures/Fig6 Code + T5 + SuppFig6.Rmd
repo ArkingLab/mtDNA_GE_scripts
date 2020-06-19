@@ -1,0 +1,213 @@
+# 5.15.2020
+# This script will look at drivers for KEGG pathways
+# Also ELK1/other stuff
+# Adapted from Meta.Forestplots.Rmd
+
+# 3.6.2020
+
+# This script will show random beta meta-analysis results. Adapted from Cross.tissue.look/forestplots.R
+```{r setup}
+library(data.table)
+library(knitr)
+library(meta)
+wdir <- paste0('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/')
+setwd(wdir)
+opts_knit$set(root.dir = wdir)
+```
+
+# get Ns for each!
+```{r}
+load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_objects/big.with.gene.w.samps.rds')
+
+load('R_objects/all.lambdas.rds')
+load('R_objects/lambda.frame.rds') 
+
+sig <- subset(lambda.frame, Lambda > all.lambdas$Lambda[nrow(all.lambdas)*0.05])
+
+only.sig <- subset(w.samps, tissue %in% sig$Tissue)
+```
+
+# What genes are driving HD?
+```{r}
+library(qusage)
+kegg.sets <- read.gmt('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/GO_enrich/MsigDB/c2.cp.kegg.v7.0.symbols.gmt')
+tft.sets <- read.gmt('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/GO_enrich/MsigDB/c3.tft.v7.0.symbols.gmt')
+go.sets <- read.gmt('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/GO_enrich/MsigDB/c5.all.v7.0.symbols.gmt')
+
+
+index = grep('^KEGG_HUNTINGTONS_DISEASE$', names(kegg.sets))
+genes <- kegg.sets[[index]]
+noblood <- subset(w.samps, tissue != 'Whole Blood')
+
+# go through, extract most significant.
+rna <- as.data.frame(matrix(nrow = 1, ncol = 3))
+colnames(rna) <- c('gene', 'meta.beta', 'meta.pval')
+for(i in 1:length(genes))
+{
+  gene <- genes[i]
+  all.but.blood <- subset(noblood, symbol == gene)
+  if(nrow(all.but.blood) > 1){
+    m1 <- metamean(all.but.blood$samps, all.but.blood$beta, all.but.blood$SE, comb.random = T)
+    meta.beta <- m1$TE.random
+    tval <- meta.beta/m1$seTE.random
+    
+    meta.pval <- 2*pt(abs(tval), m1$df.Q, lower=FALSE) # some of these pvals are still greater than one.....
+    new <- c(gene, meta.beta, meta.pval)
+    rna <- rbind(rna, new)
+  }
+}
+
+rna$meta.pval <- as.numeric(rna$meta.pval)
+rna <- rna[order(rna$meta.pval),]
+
+# sanity check, these betas and pvals are the same as what you get here:
+# '/dcs01/arking/arkinglab/active/projects/GTeX/syang/look.version8/R_objects/meta.vals.rds'
+
+# so just match genes from here instead!
+# '/dcs01/arking/arkinglab/active/projects/GTeX/syang/look.version8/R_objects/meta.vals.rds'
+load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_objects/meta.vals.rds')
+```
+
+
+# make function for checking driver genes
+```{r}
+get.drivers = function(geneset, kegg.sets, meta.vals){
+  index = grep(geneset, names(kegg.sets))
+  genes <- kegg.sets[[index]]
+  driver.genes = meta.vals[which(meta.vals$symbol %in% genes),] 
+  return(driver.genes)
+}
+
+pd = get.drivers('KEGG_PARKINSONS_DISEASE', kegg.sets, meta.vals)
+ad = get.drivers('KEGG_ALZHEIMERS_DISEASE', kegg.sets, meta.vals)
+hd = get.drivers('KEGG_HUNTINGTONS_DISEASE', kegg.sets, meta.vals)
+
+pd2 = subset(pd, meta.pval < 0.001)
+ad2 = subset(ad, meta.pval < 0.001)
+hd2 = subset(hd, meta.pval < 0.001)
+
+head(pd)
+head(ad)
+head(hd)
+```
+
+# make a venn diagram
+```{r}
+library(VennDiagram)
+
+library(RColorBrewer)
+myCol <- brewer.pal(3, "Pastel1")
+
+v = venn.diagram(
+  x = list(hd2$gene_id, pd2$gene_id, ad2$gene_id),
+  category.names = c("nominally significant HD genes" , "nominally significant  PD genes" , "nominally significant AD genes"),
+  filename = NULL,
+  output=TRUE,
+  
+  # Circles
+  lwd = 2,
+  lty = 'blank',
+  fill = myCol,
+  
+  # # Numbers
+  cex = 1.2,
+  fontface = "bold",
+  
+  # # Set names
+  cat.cex = 1,
+  cat.fontface = "bold",
+  ext.pos = list(c(0,0), c(0,0), c(0,0)),
+  ext.text = TRUE
+  # cat.just = list(c(0,0) , c(1,1) , c(0,2))
+)
+
+grid.newpage()
+pushViewport(viewport(width=unit(0.8, "npc"), height = unit(0.8, "npc")))
+grid.draw(v)
+```
+
+
+# check elk1, RNA-BP, ribosome, mt-part genes
+```{r}
+elk1 = get.drivers('^SCGGAAGY_ELK1_02$', tft.sets, meta.vals)
+rna = get.drivers('^GO_RNA_BINDING$', go.sets, meta.vals)
+rib = get.drivers('^KEGG_RIBOSOME$', kegg.sets, meta.vals)
+mito = get.drivers('^GO_MITOCHONDRIAL_PART$', go.sets, meta.vals)
+```
+
+# check mitorib
+```{r}
+mtrib = get.drivers('GO_MITOCHONDRIAL_RIBOSOME_ASSEMBLY', go.sets, meta.vals)
+```
+
+
+# pretty table of genes
+```{r}
+to.show <- rbind(head(elk1, 3), head(rna, 3), head(rib, 3), head(mito, 3))
+to.show$meta.beta <- as.numeric(to.show$meta.beta)
+to.show$meta.beta <- formatC(to.show$meta.beta, format = "e", digits = 2)
+to.show$meta.pval <-ifelse(to.show$meta.pval > 0.001, format(round(to.show$meta.pval, 3), nsmall = 3)
+, formatC(to.show$meta.pval, format = "e", digits = 2))
+to.show = dplyr::select(to.show, symbol, meta.beta, meta.pval)
+
+library(htmlTable)
+htmlTable(to.show,
+          header =  c('Gene', '&emsp;&emsp;Meta Effect estimate&emsp;&emsp;', 'Meta Pval'),
+          rnames = rep('', nrow(to.show)),
+          rgroup = c("ELK1 targets", "RNA-binding genes",
+                     "Ribosome genes", 'Mitochondrial part genes'),
+          n.rgroup = c(3, 3, 3, 3))
+
+
+```
+
+# forestplot function:
+```{r}
+makot.noblood.meta <- function(gene, combined, title = ''){
+	# you will save the plot as gene_title
+	gene.title <- paste0(gene, title)
+
+	# required packages:
+	require(forestplot)
+	require(meta)
+
+	# get effects for specific gene:	
+	gene.only <- subset(combined, symbol == gene) # 49 tissues --> but might not be same for every tissue!
+	gene.only <- gene.only[order(gene.only$t_value, decreasing = T),]
+
+	# get means and upper/lower limits
+	means <- gene.only$beta
+	upper <- gene.only$beta+gene.only$SE
+	lower <- gene.only$beta-gene.only$SE
+
+	# random effects meta-analysis, inverse variance weighted
+	# exclude blood from the meta-analysis
+	no.blood <- subset(gene.only, tissue != 'Whole Blood')
+	
+	m1 <- metamean(no.blood$samps, no.blood$beta, no.blood$SE, comb.random = T)
+	
+	# add meta to vectors
+	means <- c(NA, NA, NA, means, NA, m1$TE.random)
+	upper <- c(NA, NA, NA, upper, NA, m1$TE.random + m1$seTE.random)
+	lower <- c(NA, NA, NA, lower, NA, m1$TE.random - m1$seTE.random)
+
+	# create table text
+	text <-cbind(c(paste0("Forestplot for ", gene), NA, "Tissue", gene.only$tissue, NA, 'Summary (Random)'), 
+		c(NA, NA, 'N', gene.only$samps, NA, NA), 
+		c(NA, NA,"Beta", formatC(gene.only$beta, format = "e", digits = 2), NA, formatC(m1$TE.random, format = "e", digits = 2)))
+
+	# draw forestplot
+#	pdf(paste0('/dcs01/arking/arkinglab/active/projects/GTeX/syang/look.version8/R_code/Cross.tissue.look/forestplots/noblood/', gene.title, '.pdf'), width = 13.3, height = 7.5, onefile = F)
+	forestplot(text, means, lower, upper, col=fpColors(box="royalblue",line="darkblue", summary="royalblue"), is.summary=c(TRUE, FALSE, TRUE, rep(FALSE, nrow(gene.only)+1), TRUE))
+#	dev.off()
+}
+```
+
+# ELK1 forestplot
+```{r}
+load('R_objects/elk1.rds') # 18 tissues where ELK1 was significantly enriched
+elk.tiss <- subset(only.sig, tissue %in% elk1$tissue)
+
+make.forestplot.noblood.meta('ELK1', elk.tiss)
+```
+

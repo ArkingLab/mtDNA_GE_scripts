@@ -1,0 +1,74 @@
+# 3.4.2020
+
+# This script will look at p-value QQ-plots from permutation testing!
+```{r setup}
+library(data.table)
+wdir <- paste0('/Volumes/JHPCE 1/dcs01/active/projects/GTeX/syang/look.version8/new.permutation.method/Whole Blood')
+setwd(wdir)
+opts_knit$set(root.dir = wdir)
+```
+		
+# load stuff
+```{r}
+perm.frame <- as.data.frame(fread('perm.1'))
+colnames(perm.frame) <- 'perm.1'
+for(x in 2:100){
+  filename <- paste0('perm.', x)
+  perms <- as.data.frame(fread(filename))
+  perm.frame <- cbind(perm.frame, perms)
+  print(paste0('On permutation ', x))
+}
+
+load('/Volumes/JHPCE 1/dcs01/active/projects/GTeX/syang/look.version8/Whole Blood/with.gene.rds')
+```
+
+# fxn for plot
+```{r}
+pval_qqplot.permutes <- function (pvals, permutes, title = "QQ-plot")
+{
+  old.pvals <- pvals
+  pvals <- pvals
+  observed <- sort(pvals)
+  observed2 <- c(length(pvals))
+  observed2null <- -(log10(observed2/(length(observed2) + 1)))
+  pvals <- c(pvals, observed2null)
+  observed <- sort(pvals)
+  lobs <- -(log10(observed))
+  expected <- c(1:length(observed))
+  lexp <- -(log10(expected/(length(expected) + 1)))
+  m <- title
+  plot(c(0, 20), c(0, 20), col = "red", lwd = 4, type = "l",
+    xlab = "Expected (-logP)", ylab = "Observed (-logP)",
+    xlim = c(0, 7), ylim = c(0, 12), las = 1, xaxs = "i",
+    yaxs = "i", bty = "l", main = m)
+  for(i in 1:ncol(permutes))
+  {
+    pvals <- permutes[,i]
+    observed <- sort(pvals)
+    observed2 <- c(length(pvals))
+    observed2null <- -(log10(observed2/(length(observed2) + 1)))
+    pvals <- c(pvals, observed2null)
+    observed <- sort(pvals)
+    lobs <- -(log10(observed))
+    expected <- c(1:length(observed))
+    lexp <- -(log10(expected/(length(expected) + 1)))
+    m <- title
+    points(lexp, lobs, pch = 23, cex = 0.5, col = "gray", bg = "gray")
+  }
+  pvals <- old.pvals
+  observed <- sort(pvals)
+  observed2 <- c(length(pvals))
+  observed2null <- -(log10(observed2/(length(observed2) + 1)))
+  pvals <- c(pvals, observed2null)
+  observed <- sort(pvals)
+  lobs <- -(log10(observed))
+  expected <- c(1:length(observed))
+  lexp <- -(log10(expected/(length(expected) + 1)))
+  points(lexp, lobs, pch = 23, cex = 0.5, col = "black", bg = "black")
+}
+```
+
+# actual plotting
+```{r}
+pval_qqplot.permutes(with.gene$pval, perm.frame, title = paste0('QQ-plot for Whole Blood')) 
+```

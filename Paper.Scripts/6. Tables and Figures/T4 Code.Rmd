@@ -1,0 +1,118 @@
+# updated 4.20.2020
+# 3.9.2020
+
+# This script will look at GO pathways significant in multiple tissues! Adapted from /Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/GO_enrich/Test.GO.all.tissues/tabulate.cross.tissue.GO.nopseudo.R
+```{r setup}
+library(data.table)
+library(knitr)
+wdir <- paste0('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/')
+setwd(wdir)
+opts_knit$set(root.dir = wdir)
+```
+
+# load results for tissues
+```{r}
+# load libraries
+# install stuff
+# library(devtools)
+# source('/Volumes/JHPCE/dcs01/users/syang/libLoad.R')
+# 
+# # load full list of tissues
+# load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_objects/all_tissuesv8.rds')
+# 
+# load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/Whole Blood/sig.pathways.nopseudo.permutecut.rds')
+# big.sig.pathways <- all.results
+# big.sig.pathways$Tissue <- 'Whole Blood'
+# 
+# all_tissues <- all_tissues[1:54]
+# 
+# for (i in 1:length(all_tissues)){
+# 	char <- all_tissues[i]
+# 	wd <- paste0('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/', char)
+# 	if(file.exists(paste0(wd, '/sig.pathways.nopseudo.permutecut.rds'))){
+# 		load(paste0(wd, '/sig.pathways.nopseudo.permutecut.rds'))
+# 	  if(nrow(all.results) == 0){}else{
+# 	  all.results$Tissue <- char}
+# 		big.sig.pathways <- rbind.fill(big.sig.pathways, all.results)
+# 	}
+# }
+# 
+# save(big.sig.pathways, file = '/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_code/Cross.tissue.look/big.sig.pathways.nopseudo.permutecut.rds')
+
+load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_code/Cross.tissue.look/big.sig.pathways.nopseudo.permutecut.rds')
+```
+
+# limit to only tissues with significant GIF
+```{r}
+# limit this so only looking at tissues with significant GIF
+load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_objects/lambda.frame.rds')
+load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_objects/all.lambdas.rds')
+lambda.cutoff <- all.lambdas$Lambda[nrow(all.lambdas) * 0.05] 
+
+sig.tissues <- subset(lambda.frame, Lambda > lambda.cutoff)
+
+only.sig.tissues <- subset(big.sig.pathways, Tissue %in% sig.tissues$Tissue)
+save(only.sig.tissues, file = '/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_code/Cross.tissue.look/only.sig.tissues.rds')
+```
+
+# pathways significant in multiple tissues
+# take out negative betas.
+```{r}
+only.sig.tissues$Beta <- as.numeric(only.sig.tissues$Beta)
+
+only.sig.tissues = subset(only.sig.tissues, Beta > 0)
+lookgenes2 <- as.data.frame(table(only.sig.tissues$Gene.Set.Name))
+lookgenes2 <- lookgenes2[order(lookgenes2$Freq, decreasing = T),]
+
+looktiss <- as.data.frame(table(only.sig.tissues$Tissue))
+looktiss <- looktiss[order(looktiss$Freq, decreasing = T),]
+View(lookgenes2)
+
+high <- subset(lookgenes2, Freq > 13)
+
+ggplot(lookgenes2, aes(Freq)) + geom_density() + geom_rug() + geom_vline(xintercept = high$Freq, lty = 2, colour = "gray50") + 
+  geom_text(data = high, aes(x=high$Freq, y = .1), label = high$Var1, vjust = -0.5, hjust = 0, size = 4, angle = 90, colour = "gray50") + xlab('Number of tissues significant in')
+
+set.info <- dplyr::select(only.sig.tissues, Gene.Set.Name, Set)
+```
+
+## distribution of lookgenes2
+```{r}
+# dan says use a barplot
+# ggplot(lookgenes2, aes(Freq)) + geom_density() + geom_rug()
+
+# Basic barplot
+top20 = head(lookgenes2, 10)
+
+top20$Var1 = factor(top20$Var1, levels = top20$Var1[order(top20$Freq, decreasing = T)])
+
+p<-ggplot(top20, aes(x=Var1, y=Freq)) + geom_bar(stat="identity")
+
+p + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+## show lookgenes2 prettily
+```{r}
+w.info <- merge(lookgenes2, set.info, by.x = 'Var1', by.y = 'Gene.Set.Name')
+
+u <- unique(w.info)
+u <- u[order(u$Freq, decreasing = T),]
+no.tfs <- subset(u, Set != "TFT")
+tfs <- subset(u, Set == "TFT")
+mito <- u[grep('MITOC', u$Var1),]
+kegg <- subset(u, Set == 'KEGG')
+
+show <- rbind(head(tfs, 5), head(no.tfs, 5), head(kegg,5), head(mito,5))
+show <- dplyr::select(show, Var1, Freq)
+
+library(htmlTable)
+htmlTable(show,
+          header =  c('Pathway', '&emsp;&emsp;&emsp;&emsp;Number of significant tissues&emsp;&emsp;&emsp;&emsp;'),
+          rnames = rep('', nrow(lookgenes2)),
+          rgroup = c('Transcription factors', "GO terms", 'KEGG terms', "Mitochondrial terms"),
+          n.rgroup = c(5,5,5,5))
+# 
+# show$Var1 <- tolower(show$Var1)
+# show$Var1 <- gsub('go_', '', show$Var1)
+# show$Var1 <- gsub('kegg_', '', show$Var1)
+```

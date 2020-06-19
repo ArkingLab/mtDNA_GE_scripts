@@ -1,0 +1,172 @@
+# 6.15.2020
+# Adapted from Dan Arking
+# Do on command line
+# Make a table for manuscript
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(lattice)
+library(splines)
+library(survival)
+library(knitr)
+```
+## KEGG Pathways include Parkinsons and Alzheimers
+## check for association in UKB
+## Generate combined parkinsons and dementia (Neurodisease)
+### check cases in each race group
+
+
+```{r data, echo=FALSE, cache=TRUE}
+data<-readRDS("/dcl01/arking/data/static/UKBiobank/GWAS_data/pheno/ukbPheno_05052020.rds")
+# data<-readRDS("C:/Users/darking/Desktop/UKB/phenotypes/ukbPheno_05052020.rds")
+##include ethnicity
+data$race<-fct_collapse(data$ethnicity,
+                         White = c("White","British","Irish","Any other white background"),
+                         Mixed = c("Mixed", "White and Black African", "White and Asian","Any other mixed background","White and Black Caribbean"),
+                         Asian = c("Asian or Asian British","Indian","Pakistani","Bangladeshi","Any other Asian background"),
+                        Black = c("Black or Black British","Caribbean","African","Any other Black background"),
+                        Chinese =c("Chinese"),
+                        Other = c("Other ethnic group"),
+                        Missing = c("Prefer not to answer","Do not know")
+                        )
+#combine dementia and parkinsons
+data <- data %>% mutate(Neurodisease=ifelse((Parkinson==1 | Dementia==1),1,0), incNeurodisease=ifelse((incParkinson==1 | incDementia==1),1,0), prvNeurodisease=ifelse((prvParkinson==1 | prvDementia==1),1,0),ttNeurodisease=pmin(ttDementia,ttParkinson))
+#remove as incident is either disease is prevalent
+data<- data %>% mutate(incNeurodisease=ifelse(prvNeurodisease==1,NA,incNeurodisease),ttNeurodisease=ifelse(prvNeurodisease==1,NA,ttNeurodisease))
+  
+t0<-data %>% filter(!(is.na(mtDNA_CN1))) %>% group_by(Neurodisease,race) %>% summarise(Count=n())
+t0    
+clean.data<-data %>% filter(race =="White" & used.in.pca.calculation==1)
+```
+
+## Focus on European ancestry, since all other groups <10 cases
+## Only use unrelated individuals (used.in.pca.calculation==1)
+## mtDNA_CN1 is corrected for ns(age,df=2) + sex
+## mtDNA_CN2 is corrected for ns(age,df=2) + sex + Lymph + Platelet + Mono + NucRBC + Neutrophil + Baso + Eos
+### cannot use too many covariates due to small number of cases
+### Model 1 = age + sex + mtDNA_CN1
+### Model 1ex = age + sex + mtDNA_CN1 (exluding cell type count outliers)
+### Model 2 = age + sex + mtDNA_CN2 (exluding cell type count outliers)
+### Model 3 = model 2 + SmokingStatus
+### Model 4 = model 3 + center
+### Model 5 = model 4 + year + month
+```{r, echo=FALSE}
+log_model<-function(pheno,dataset) { 
+  pheno.model<-paste0("prv",pheno)
+  model1<-c("age","sex","mtDNA_CN1")
+  model2<-c("age","sex","mtDNA_CN2")
+  model3<-c(model2,"SmokingStatus")
+  model4<-c(model3,"Center")
+  #model5<-c(model4,"year","month")
+  lm1<-glm(reformulate(model1,pheno.model),data=dataset,family="binomial")
+  lm1ex<-glm(reformulate(model1,pheno.model),data=subset(dataset,!(is.na(mtDNA_CN2))),family="binomial")
+  lm2<-glm(reformulate(model2,pheno.model),data=dataset,family="binomial")
+  lm3<-glm(reformulate(model3,pheno.model),data=dataset,family="binomial")
+  lm4<-glm(reformulate(model4,pheno.model),data=dataset,family="binomial")
+  #lm5<-glm(reformulate(model5,pheno.model),data=dataset,family="binomial")
+  
+  #results
+  m1<-c(format(coef(summary(lm1))["mtDNA_CN1",],digits=3))
+  m1ex<-c(format(coef(summary(lm1ex))["mtDNA_CN1",],digits=3))
+  m2<-c(format(coef(summary(lm2))["mtDNA_CN2",],digits=3))
+  m3<-c(format(coef(summary(lm3))["mtDNA_CN2",],digits=3))
+  m4<-c(format(coef(summary(lm4))["mtDNA_CN2",],digits=3))
+  #m5<-c(format(coef(summary(lm5))["mtDNA_CN2",],digits=3))
+  
+  out<-as.data.frame(rbind(m1,m1ex,m2,m3,m4))
+  #out<-as.data.frame(rbind(m1,m1ex,m2,m3,m4,m5))
+  return(out)
+}
+cox_model<-function(pheno,dataset) { 
+  pheno.model<-paste0("Surv(tt",pheno,",inc",pheno,")")
+  model1<-c("age","sex","mtDNA_CN1")
+  model2<-c("age","sex","mtDNA_CN2")
+  model3<-c(model2,"SmokingStatus")
+  model4<-c(model3,"Center")
+  #model5<-c(model4,"year","month")
+  lm1<-coxph(reformulate(model1,pheno.model),data=dataset)
+  print(summary(lm1))
+  lm1ex<-coxph(reformulate(model1,pheno.model),data=subset(dataset,!(is.na(mtDNA_CN2))))
+  lm2<-coxph(reformulate(model2,pheno.model),data=dataset)
+  lm3<-coxph(reformulate(model3,pheno.model),data=dataset)
+  lm4<-coxph(reformulate(model4,pheno.model),data=dataset)
+  #lm5<-glm(reformulate(model5,pheno.model),data=dataset)
+  
+  #results
+  m1<-c(format(coef(summary(lm1))["mtDNA_CN1",],digits=3))
+  m1ex<-c(format(coef(summary(lm1ex))["mtDNA_CN1",],digits=3))
+  m2<-c(format(coef(summary(lm2))["mtDNA_CN2",],digits=3))
+  m3<-c(format(coef(summary(lm3))["mtDNA_CN2",],digits=3))
+  m4<-c(format(coef(summary(lm4))["mtDNA_CN2",],digits=3))
+  #m5<-c(format(coef(summary(lm5))["mtDNA_CN2",],digits=3))
+  
+  out<-as.data.frame(rbind(m1,m1ex,m2,m3,m4))
+  #out<-as.data.frame(rbind(m1,m1ex,m2,m3,m4,m5))
+  return(out)
+}
+```
+## Parkinsons
+```{r Parkinsons, echo=FALSE}
+t1<-clean.data %>% filter(!(is.na(mtDNA_CN1))) %>% group_by(Parkinson, prvParkinson) %>% summarise(Count=n())
+t1
+kable(log_model("Parkinson",clean.data),caption="Prevalent Disease")
+kable(cox_model("Parkinson",clean.data),caption="Incident Disease")
+
+pd = cox_model("Parkinson",clean.data)
+save(pd, file = '/dcs01/arking/arkinglab/active/projects/GTeX/syang/look.version8/R_objects/UKB/pd.rds')
+```
+## Alzheimers
+### too few to run prevalent disease
+```{r Alzh, echo=FALSE}
+t2<-clean.data %>% filter(!(is.na(mtDNA_CN1))) %>% group_by(Alzh, prvAlzh) %>% summarise(Count=n())
+t2
+kable(cox_model("Alzh",clean.data),caption="Incident Disease")
+
+ad = cox_model("Alzh",clean.data)
+save(ad, file = '/dcs01/arking/arkinglab/active/projects/GTeX/syang/look.version8/R_objects/UKB/ad.rds')
+```
+## Dementia (includes Alzh)
+```{r dementia, echo=FALSE}
+t3<-clean.data %>% filter(!(is.na(mtDNA_CN1))) %>% group_by(Dementia, prvDementia) %>% summarise(Count=n())
+t3
+kable(log_model("Dementia",clean.data),caption="Prevalent Disease")
+kable(cox_model("Dementia",clean.data),caption="Incident Disease")
+kable(cox_model("Dementia",clean.data %>% filter(Alzh==0)),caption="Incident Disease (No Alzh)")
+
+dem = cox_model("Dementia",clean.data %>% filter(Alzh==0))
+save(dem, file = '/dcs01/arking/arkinglab/active/projects/GTeX/syang/look.version8/R_objects/UKB/dem.rds')
+```
+
+### strong effect for Alzh, but probably true for non-Alzh dementia as well
+## check overlap between Dementia and Parkinsons
+```{r, echo=FALSE}
+t4<-clean.data %>% filter(!(is.na(mtDNA_CN1))) %>% group_by(Dementia, Parkinson) %>% summarise(Count=n())
+t4
+t5<-clean.data %>% filter(!(is.na(mtDNA_CN1))) %>% group_by(Neurodisease,prvNeurodisease) %>% summarise(Count=n())
+t5
+kable(log_model("Neurodisease",clean.data),caption="Prevalent Disease")
+kable(cox_model("Neurodisease",clean.data),caption="Incident Disease")
+nd = cox_model("Neurodisease",clean.data)
+save(nd, file = '/dcs01/arking/arkinglab/active/projects/GTeX/syang/look.version8/R_objects/UKB/nd.rds')
+
+table(clean.data$incParkinson, clean.data$incAlzh)
+```
+
+```{r, echo=FALSE, eval=FALSE}
+summary(coxph(Surv(ttNeurodisease,incNeurodisease)~mtDNA_CN1+sex+ns(age,df=2)+SmokingStatus,data=clean.data))
+summary(glm(prvNeurodisease~mtDNA_CN1+sex+ns(age,df=2)+SmokingStatus,data=clean.data,family="binomial"))
+```
+
+```{r, echo=FALSE, eval=FALSE}
+summary(coxph(Surv(ttNeurodisease,incNeurodisease)~mtDNA_CN1+sex+ns(age,df=2)+SmokingStatus,data=clean.data))
+summary(glm(prvNeurodisease~mtDNA_CN1+sex+ns(age,df=2)+SmokingStatus,data=clean.data,family="binomial"))
+
+summary(coxph(Surv(ttNeurodisease,incNeurodisease)~mtDNA_CN1+sex+ns(age,df=2),data=clean.data))
+
+clean.data$ttAlz %>% median
+clean.data$ttParkinson %>% median
+clean.data$ttDementia %>% median
+clean.data$ttNeurodisease %>% median
+```
+

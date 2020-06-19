@@ -1,0 +1,44 @@
+# 6.1.2020
+# Make a table of UKB results for manuscript
+```{r setup}
+library(data.table)
+library(knitr)
+library(meta)
+wdir <- paste0('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/')
+setwd(wdir)
+opts_knit$set(root.dir = wdir)
+```
+
+# load results files
+```{r}
+load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_objects/UKB/ad.rds')
+load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_objects/UKB/pd.rds')
+load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_objects/UKB/dem.rds')
+load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_objects/UKB/nd.rds')
+```
+
+# format for an htmlTable
+```{r}
+# 63 incident pd
+# 41 incident ad
+# 74 incident dementia (no AD)
+all = rbind(pd[2,], ad[2,], dem[2,], nd[2,])
+rownames(all) = c('PD', 'AD', 'Dementia', 'ND')
+all$`exp(coef)` = round(as.numeric(as.character(all$`exp(coef)`)), 2)
+all$`Pr(>|z|)` = round(as.numeric(as.character(all$`Pr(>|z|)`)), 4)
+all$Cases = c('63/39,044', '41/39,100', '74/39,048', '161/39,030')
+# all$ConfInt = c('0.5802;0.9735', '0.4353;0.8104', '0.6352,1.021')
+all$ConfInt = c('0.60;0.99', '0.44;0.81', '0.65,1.02', '0.66;0.90')
+```
+
+# htmlTable
+```{r}
+all$Disease = c("Parkinson's disease", "Alzheimer's disease", "Dementia (excluding AD)", "Combined neurodegenerative disease")
+show = dplyr::select(all, Disease, `exp(coef)`, ConfInt, Cases, `Pr(>|z|)`)
+
+library(htmlTable)
+htmlTable(show,
+          header =  c('Disease', '&nbsp;Hazard ratio&nbsp;', '&nbsp;Confidence interval&nbsp;', '&nbsp;Number of cases&nbsp;', '&nbsp;P-value&nbsp;'),
+          rnames = rep('', nrow(show)))
+
+```

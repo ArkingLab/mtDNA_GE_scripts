@@ -1,0 +1,186 @@
+# 4.3.2020
+
+# This script will show 
+1. the shift towards positive estimates for the association between gene expression and mtDNA-CN (both blood)
+
+2. A table showing the most significant genes
+
+3. A table showing significance for transcription factors
+
+#### load data
+```{r}
+load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/Whole Blood/with.gene.rds')
+
+load('/Volumes/JHPCE/dcs01/resources/ensembl/only.care.rds') # made in /dcs01/arking/arkinglab/resources/ensembl/try.read.R
+w.annot <- merge(only.care, with.gene, by = 'gene_id') # 23758 yay
+w.annot$symbol <- w.annot$symbol.y
+```
+
+#### subset no pseudogenes
+```{r}
+gene.types <- unique(w.annot$gene_type)
+pseudo.types <- gene.types[grep('pseudo', gene.types)]
+'%!in%' <- function(x,y)!('%in%'(x,y))
+with.gene <- subset(w.annot, gene_type %!in% pseudo.types)
+```
+
+# This will show a shift towards positively associated genes
+
+# 1. plot distribution
+```{r}
+load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/Whole Blood/with.gene.rds')
+
+library(ggplot2)
+ggplot(with.gene, aes(t_value)) + geom_rug() + geom_density() 
+sig <- subset(with.gene, pval < 0.05)
+
+ggplot(sig, aes(t_value)) + geom_rug() + geom_density(color = 'black', fill = '#999999') + xlab('T-value') + theme_classic()
+
+sig$dir <- ifelse(sig$beta < 0, 'Neg', 'Pos')
+table(sig$dir)
+```
+
+# 2. make table
+```{r}
+library(htmlTable)
+with.gene <- with.gene[order(with.gene$pval),]
+top.ten <- subset(with.gene, pval < 0.05)
+top.ten <- dplyr::select(top.ten, symbol, gene_type, beta, pval)
+
+top.ten$beta <- formatC(top.ten$beta, format = "e", digits = 2)
+top.ten$pval <-ifelse(top.ten$pval > 0.001, format(round(top.ten$pval, 3), nsmall = 3)
+, formatC(top.ten$pval, format = "e", digits = 2))
+
+top.ten$gene_type <- gsub('protein_coding', 'protein coding', top.ten$gene_type)
+
+only.matter <- dplyr::select(with.gene, symbol, gene_type, beta, pval)
+
+library(htmlTable)
+# htmlTable(only.matter,
+#           header =  c('Gene', '&emsp;&emsp;Gene Class&emsp;&emsp;', '&emsp;&emsp;&emsp;&emsp;Effect size&emsp;&emsp;&emsp;&emsp;', '&emsp;&emsp;P-value&emsp;&emsp;'),
+#           rnames = rep('', nrow(top.ten)))
+```
+
+# 2.5 get annotations for genes
+```{r}
+# read in all sets for go.
+library(qusage)
+# go.sets <- read.gmt('/Volumes/JHPCE 1/dcs01//active/projects/GTeX/syang/look.version8/GO_enrich/MsigDB/c5.all.v7.0.symbols.gmt')
+
+# GO is far too slow. use KEGG.
+
+kegg.sets <- read.gmt('/Volumes/JHPCE 1/dcs01/active/projects/GTeX/syang/look.version8/GO_enrich/MsigDB/c2.cp.kegg.v7.0.symbols.gmt')
+
+# certain things to highlight
+# here are ones that are across tissue.....
+# 
+# carry.annot <- as.data.frame(matrix(nrow = 1, ncol = 2))
+# colnames(carry.annot) <- c('Gene', 'Annotation')
+# 
+# for(i in 1:nrow(top.ten)){
+#   # exact searches do not work!
+#   # to.search <- paste0('^', top.ten$symbol[i], '$')
+#   to.search <- paste0(top.ten$symbol[i])
+#   indices <- grep(to.search, kegg.sets)
+#   kegg.terms <- names(kegg.sets[indices])
+#   to.add <- data.frame(Gene = rep(to.search, length(kegg.terms)), Annotation = kegg.terms)
+#   carry.annot <- rbind(carry.annot, to.add)
+#   if(i %% 100 == 0){
+#     print(paste('On gene', i))
+#   }
+# }
+# save(carry.annot, file = '/Volumes/JHPCE 1/dcs01/active/projects/GTeX/syang/look.version8/Whole Blood/carry.annot.rds')
+load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/Whole Blood/carry.annot.rds')
+```
+
+# 2.75 check
+```{r}
+
+freq <- as.data.frame(table(carry.annot$Annotation))
+freq <- freq[order(freq$Freq, decreasing = T),]
+
+head(freq, 10)
+
+pathway1 <- 'KEGG_ENDOCYTOSIS'
+pathway2 <- 'KEGG_MAPK_SIGNALING_PATHWAY'
+check.overlap <- function(carry.annot, pathway1, pathway2){
+  set1 <- subset(carry.annot, Annotation == pathway1)
+  set2 <- subset(carry.annot, Annotation == pathway2)
+  intersect(set1$Gene, set2$Gene) %>% length -> both
+  print(paste(nrow(set1), nrow(set2), both))
+}
+
+check.overlap(carry.annot, 'KEGG_ENDOCYTOSIS', 'KEGG_MAPK_SIGNALING_PATHWAY')
+check.overlap(carry.annot, 'KEGG_ENDOCYTOSIS', 'KEGG_UBIQUITIN_MEDIATED_PROTEOLYSIS')
+check.overlap(carry.annot, 'KEGG_MAPK_SIGNALING_PATHWAY', 'KEGG_UBIQUITIN_MEDIATED_PROTEOLYSIS')
+
+mapk <- subset(carry.annot, Annotation == 'KEGG_MAPK_SIGNALING_PATHWAY')
+ubq <- subset(carry.annot, Annotation == 'KEGG_UBIQUITIN_MEDIATED_PROTEOLYSIS')
+endo <- subset(carry.annot, Annotation == 'KEGG_ENDOCYTOSIS')
+
+
+mapk2 <- only.matter[which(only.matter$symbol %in% mapk$Gene),]
+ubq2 <- only.matter[which(only.matter$symbol %in% ubq$Gene),]
+endo2 <- only.matter[which(only.matter$symbol %in% endo$Gene),]
+
+# take only bonferroni significant:
+mapk3 <- subset(mapk2, pval < 2.423772e-06) # 13
+ubq3 <- subset(ubq2, pval < 2.423772e-06) # 13
+endo3 <- subset(endo2, pval < 2.423772e-06) # 11
+
+# that's still too many!  Just take the top 5. 
+to.show <- rbind(head(mapk2, 5), head(endo2, 5), head(ubq2, 5))
+```
+
+### uhh...just use the top 3 KEGG terms.
+```{r}
+load('/Volumes/JHPCE 1/dcs01/active/projects/GTeX/syang/look.version8/Whole Blood/all.kegg.rds')
+
+head(all.kegg.sets$Gene.Set.Name, 5)
+cyt <- subset(carry.annot, Annotation == 'KEGG_CYTOKINE_CYTOKINE_RECEPTOR_INTERACTION')
+ubq <- subset(carry.annot, Annotation == 'KEGG_UBIQUITIN_MEDIATED_PROTEOLYSIS')
+splice <- subset(carry.annot, Annotation == 'KEGG_SPLICEOSOME')
+
+cyt2 <- only.matter[which(only.matter$symbol %in% cyt$Gene),]
+ubq2 <- only.matter[which(only.matter$symbol %in% ubq$Gene),]
+splice2 <- only.matter[which(only.matter$symbol %in% splice$Gene),]
+
+to.show <- rbind(head(cyt2, 5), head(ubq2, 5), head(splice2, 5))
+```
+
+### table
+```{r}
+to.show$beta <- formatC(to.show$beta, format = "e", digits = 2)
+to.show$pval <-ifelse(to.show$pval > 0.001, format(round(to.show$pval, 3), nsmall = 3)
+, formatC(to.show$pval, format = "e", digits = 2))
+to.show <- dplyr::select(to.show, -gene_type)
+
+htmlTable(to.show,
+          header =  c('Gene', '&emsp;&emsp;&emsp;&emsp;Effect size&emsp;&emsp;&emsp;&emsp;', '&emsp;&emsp;P-value&emsp;&emsp;'),
+          rnames = rep('', nrow(to.show)),
+          rgroup = c('Cytokine-cytokine receptor interaction',
+                     "Ubiquitin-mediated proteolysis", "Spliceosome"),
+          n.rgroup = c(5,5,5))
+```
+
+
+
+
+# 3. TFs
+sidetracked to tf land
+the top 5 TFs: how do they look?
+unclear is gabp b is gabpb1 or gabpb2, so have both.
+
+```{r}
+tfs <- rbind(only.matter[grep('ELK1', only.matter$symbol),], only.matter[grep('^NRF1$', only.matter$symbol),], only.matter[grep('^YY1$', only.matter$symbol),], only.matter[grep('^GABPB1$', only.matter$symbol),], only.matter[grep('^GABPB2$', only.matter$symbol),], only.matter[grep('^E4F1$', only.matter$symbol),])
+
+tfs$beta <- formatC(tfs$beta, format = "e", digits = 2)
+tfs$pval <-ifelse(tfs$pval > 0.001, format(round(tfs$pval, 3), nsmall = 3)
+, formatC(tfs$pval, format = "e", digits = 2))
+tfs <- dplyr::select(tfs, -gene_type)
+
+library(htmlTable)
+htmlTable(tfs,
+          header =  c('Gene', '&emsp;&emsp;&emsp;&emsp;Effect size&emsp;&emsp;&emsp;&emsp;', '&emsp;&emsp;P-value&emsp;&emsp;'),
+          rnames = rep('', nrow(tfs)))
+```

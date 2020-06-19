@@ -1,0 +1,104 @@
+# 6.1.2020
+
+# This script will look at HD/PD/AD associations in brain tissues
+# As well as specific genes
+```{r setup}
+library(data.table)
+library(knitr)
+library(meta)
+wdir <- paste0('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/')
+setwd(wdir)
+opts_knit$set(root.dir = wdir)
+```
+
+
+# What genes are driving HD?
+```{r}
+library(qusage)
+kegg.sets <- read.gmt('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/GO_enrich/MsigDB/c2.cp.kegg.v7.0.symbols.gmt')
+hd.genes <- kegg.sets[[grep('^KEGG_HUNTINGTONS_DISEASE$', names(kegg.sets))]]
+pd.genes <- kegg.sets[[grep('^KEGG_PARKINSONS_DISEASE$', names(kegg.sets))]]
+ad.genes <- kegg.sets[[grep('^KEGG_ALZHEIMERS_DISEASE$', names(kegg.sets))]]
+```
+
+# make a giant forestplot with brain tissues
+```{r}
+load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_objects/all_tissuesv8.rds')
+
+brain.results = as.data.frame(matrix(nrow = 1, ncol = 8))
+colnames(brain.results) = c('Gene.Set.Name', 'T.test.pval', 'Rank.t.test.pval', 'Num.genes.in.set', 'Beta', 'Confint.Upper', 'Confint.Lower', 'Tissue')
+
+for(i in 8:20){
+  char = all_tissues[i]
+  load(paste0('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/', char, '/all.kegg.rds'))
+  hd = grep('^KEGG_HUNTINGTONS_DISEASE$', all.kegg.sets$Gene.Set.Name)
+  ad = grep('^KEGG_ALZHEIMERS_DISEASE$', all.kegg.sets$Gene.Set.Name)
+  pd = grep('^KEGG_PARKINSONS_DISEASE$', all.kegg.sets$Gene.Set.Name)
+  nd = all.kegg.sets[c(hd, ad, pd),]
+  nd$Tissue = char
+  brain.results = rbind(brain.results, nd)
+}
+brain.results = na.omit(brain.results)
+```
+
+# fp code:
+```{r}
+make.forestplot.go <- function(go.term, only.sig.tissues){
+	# required packages:
+	require(forestplot)
+	require(meta)
+
+	# get effects for specific go.term:	
+	go.term.only <- subset(only.sig.tissues, Gene.Set.Name == go.term) # 48 tissues --> but might not be same for every tissue!
+	
+	
+	go.term.only$Beta <- as.numeric(go.term.only$Beta)  
+	go.term.only <- go.term.only[order(go.term.only$Beta, decreasing = T),]
+	go.term.only$Confint.Upper <- as.numeric(go.term.only$Confint.Upper)  
+	go.term.only$Confint.Lower <- as.numeric(go.term.only$Confint.Lower)  
+	
+	# get means and upper/lower limits
+	means <- go.term.only$Beta
+	
+	# the lower and upper confidence intervals are flipped (my bad)!
+	lower <- go.term.only$Confint.Upper
+	upper <- go.term.only$Confint.Lower
+
+  go.term.only$SE <- go.term.only$Beta - go.term.only$Confint.Upper
+	go.term.only$SE2 <- go.term.only$Confint.Lower - go.term.only$Beta
+	dplyr::select(go.term.only, SE, SE2)
+	# the lower and upper confidence intervals are flipped!
+	
+	# random effects meta-analysis, inverse variance weighted
+	m1 <- metamean(go.term.only$samps, go.term.only$Beta, go.term.only$SE, comb.random = T)
+	
+	# add meta to vectors
+	means <- c(NA, NA, NA, means, NA, m1$TE.random)
+	upper <- c(NA, NA, NA, upper, NA, m1$TE.random + m1$seTE.random)
+	lower <- c(NA, NA, NA, lower, NA, m1$TE.random - m1$seTE.random)
+
+	# create table text
+	text <-cbind(c(paste0("Forestplot for ", go.term), NA, "Tissue", go.term.only$Tissue, NA, 'Summary (Random)'), 
+		c(NA, NA, 'N', go.term.only$samps, NA, NA), 
+		c(NA, NA,"Beta", formatC(go.term.only$Beta, format = "e", digits = 2), NA, formatC(m1$TE.random, format = "e", digits = 2)))
+
+	# draw forestplot
+	# pdf(paste0('/dcs01/arking/arkinglab/active/projects/GTeX/syang/look.version8/R_code/Cross.tissue.look/forestplots/', go.term.title, '.pdf'), width = 13.3, height = 7.5, onefile = F)
+	forestplot(text, means, lower, upper, col=fpColors(box="royalblue",line="darkblue", summary="royalblue"), is.summary=c(TRUE, FALSE, TRUE, rep(FALSE, nrow(go.term.only)+1), TRUE))
+
+	# dev.off()
+}
+
+load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_objects/numsamps.rds')
+
+brain.results = merge(brain.results, numsamps, by.x = 'Tissue', by.y = 'tissue')
+```
+
+
+```{r}
+make.forestplot.go('KEGG_HUNTINGTONS_DISEASE', brain.results)
+make.forestplot.go('KEGG_ALZHEIMERS_DISEASE', brain.results)
+make.forestplot.go('KEGG_PARKINSONS_DISEASE', brain.results)
+
+```
+
