@@ -170,9 +170,12 @@ lower <- c(NA, NA, NA, lower, NA)
 text <-cbind(c("36 MT-encoded genes in whole blood", NA, "Genes", mt$symbol, NA), c(NA, NA,"Effect estimate", formatC(mt$beta, format = "e", digits = 2), NA))
 
 	# draw forestplot
-pdf(paste0('~/Desktop/Nice.Screenshots/mtrna.forestplot.pdf'), width = 10, height = 8, onefile = F)
-	forestplot(text, means, lower, upper, col=fpColors(box="royalblue",line="darkblue", summary="royalblue"), is.summary=c(TRUE, FALSE, TRUE, rep(FALSE, nrow(mt)+1), TRUE),
-       txt_gp = fpTxtGp(ticks=gpar(cex=0.9)))
+pdf(paste0('~/Desktop/mtrna.forestplot.pdf'), width = 10, height = 8, onefile = F)
+	
+xticks = seq(from = -0.05, to = 0.3, by = 0.05)
+forestplot(text, means, lower, upper, col=fpColors(box="royalblue",line="darkblue", summary="royalblue"), is.summary=c(TRUE, FALSE, TRUE, rep(FALSE, nrow(mt)+1), TRUE),
+       txt_gp = fpTxtGp(ticks=gpar(cex=0.9)), new_page = TRUE, xticks = xticks)
+
 dev.off()
 
 mt.care <- dplyr::select(mt, symbol, beta, pval)
