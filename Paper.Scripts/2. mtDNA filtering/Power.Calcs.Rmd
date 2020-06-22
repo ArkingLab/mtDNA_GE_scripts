@@ -1,0 +1,34 @@
+# 4.3.2020
+# This script calculates power for observing a significant effect for known correlates.
+
+# Aric R^2 values from Ryan:
+```{r}
+agemult = 0.008552
+ageadj = 0.007883
+
+sexmult = 0.02774
+sexadj = 0.02709
+
+wbcmult = 0.04947
+wbcadj = 0.04883
+
+# Calculate effect size measures
+# https://www.statmethods.net/stats/power.html
+agef2 = agemult/(1-agemult)
+sexf2 = sexmult/(1-sexmult)
+wbcf2 = wbcmult/(1-wbcmult)
+```
+
+
+# Use the pwr package:
+```{r}
+library(pwr)
+
+# covariates used: age, sex, 
+# u = number of covariates, not including intercept ((mtDNA ~ Neutrophils/SEX/AGE + HSC + Megakaryocytes + COHORT + TRISCHD)) = 4
+# v = n - u - 1  = 418 - 4 - 1 = 391
+
+pwr.f2.test(u = 4, v = 413, f2 = agef2, sig.level = .05)
+pwr.f2.test(u = 4, v = 413, f2 = sexf2, sig.level = .05)
+pwr.f2.test(u = 4, v = 413, f2 = wbcf2, sig.level = .05)
+```
