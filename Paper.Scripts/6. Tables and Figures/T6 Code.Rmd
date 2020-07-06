@@ -132,9 +132,12 @@ t3<-clean.data %>% filter(!(is.na(mtDNA_CN1))) %>% group_by(Dementia, prvDementi
 t3
 kable(log_model("Dementia",clean.data),caption="Prevalent Disease")
 kable(cox_model("Dementia",clean.data),caption="Incident Disease")
+
+cox_model("Dementia",clean.data))
 kable(cox_model("Dementia",clean.data %>% filter(Alzh==0)),caption="Incident Disease (No Alzh)")
 
 dem = cox_model("Dementia",clean.data %>% filter(Alzh==0))
+dem = cox_model("Dementia",clean.data)
 save(dem, file = '/dcs01/arking/arkinglab/active/projects/GTeX/syang/look.version8/R_objects/UKB/dem.rds')
 ```
 
