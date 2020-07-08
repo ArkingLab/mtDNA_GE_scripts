@@ -66,6 +66,7 @@ rna <- rna[order(rna$meta.pval),]
 # so just match genes from here instead!
 # '/dcs01/arking/arkinglab/active/projects/GTeX/syang/look.version8/R_objects/meta.vals.rds'
 load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_objects/meta.vals.rds')
+meta.vals$stderr = meta.vals$meta.beta/as.numeric(meta.vals$meta.tval)
 ```
 
 
@@ -146,13 +147,22 @@ mtrib = get.drivers('GO_MITOCHONDRIAL_RIBOSOME_ASSEMBLY', go.sets, meta.vals)
 to.show <- rbind(head(elk1, 3), head(rna, 3), head(rib, 3), head(mito, 3))
 to.show$meta.beta <- as.numeric(to.show$meta.beta)
 to.show$meta.beta <- formatC(to.show$meta.beta, format = "e", digits = 2)
-to.show$meta.pval <-ifelse(to.show$meta.pval > 0.001, format(round(to.show$meta.pval, 3), nsmall = 3)
-, formatC(to.show$meta.pval, format = "e", digits = 2))
-to.show = dplyr::select(to.show, symbol, meta.beta, meta.pval)
+to.show$meta.pval2 <- ifelse(to.show$meta.pval > 0.001, format(round(to.show$meta.pval, 3), nsmall = 3), formatC(to.show$meta.pval, format = "e", digits = 2))
+to.show$meta.pval2 <- ifelse(to.show$meta.pval > 0.05, format(round(to.show$meta.pval, 2), nsmall = 2), to.show$meta.pval2
+                             
+
+
+to.show$stderr <- formatC(to.show$stderr, format = "e", digits = 2)
+
+# turn to expression format....
+expression(paste("8.9 x ",10^{-5} ) )
+
+
+to.show = dplyr::select(to.show, symbol, meta.beta, stderr, meta.pval)
 
 library(htmlTable)
 htmlTable(to.show,
-          header =  c('Gene', '&emsp;&emsp;Meta Effect estimate&emsp;&emsp;', 'Meta Pval'),
+          header =  c('Gene', '&emsp;&emsp;Meta Effect estimate&emsp;&emsp;', 'Meta standard error', 'Meta p-value'),
           rnames = rep('', nrow(to.show)),
           rgroup = c("ELK1 targets", "RNA-binding genes",
                      "Ribosome genes", 'Mitochondrial part genes'),
@@ -163,7 +173,7 @@ htmlTable(to.show,
 
 # forestplot function:
 ```{r}
-makot.noblood.meta <- function(gene, combined, title = ''){
+make.forestplot.noblood.meta <- function(gene, combined, title = ''){
 	# you will save the plot as gene_title
 	gene.title <- paste0(gene, title)
 

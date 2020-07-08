@@ -1,0 +1,5 @@
+# Adjust residuals
+```{r}
+resid.mtDNA=residuals(lm(chrMT ~ ns(Total,df=3) + ns(unknown,df=4) + ns(decoy1,df=7) + decoy2))
+mtDNA_CN1 = residuals(lm(resid.mtDNA ~ ns(age,df=2) + sex))
+```

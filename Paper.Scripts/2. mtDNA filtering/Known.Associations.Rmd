@@ -30,8 +30,8 @@ ggplot(final.mito, aes(AGE, noAGE)) + geom_point()
 
 lm(noAGE ~ scale(AGE), data = final.mito) %>% summary
 lm(noSEX ~ SEX, data = final.mito) %>% summary
-lm(mtDNA ~ SEX, data = final.mito) %>% summary
-lm(mtDNA ~ AGE, data = final.mito) %>% summary
+# lm(mtDNA ~ SEX, data = final.mito) %>% summary
+# lm(mtDNA ~ AGE, data = final.mito) %>% summary
 pairs(~AGE + SEX + Neutrophils + HSC + Megakaryocytes, data = final.mito, lower.panel=twolines, diag.panel=mydiag.panel, upper.panel=panel.cor, label.pos=0.5, main="Correlation matrix of PCs and covariates", labels = c('age', 'sex', 'neutrophils', 'hsc', 'megakaryocytes'))
 
 lm(noNEUT ~ scale(Neutrophils), data = final.mito) %>% summary

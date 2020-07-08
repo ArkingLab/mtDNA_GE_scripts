@@ -56,8 +56,12 @@ knitr::kable(important)
 important.save <- important
 important$beta <- formatC(important$beta, format = "e", digits = 2)
 important$SE <-formatC(important$SE, format = "e", digits = 2)
-important$pval <-ifelse(important$pval > 0.001, format(round(important$pval, 3), nsmall = 3), formatC(important$pval, format = "e", digits = 2))
+to.show <- important
 
+to.show$pval2 <- ifelse(to.show$pval > 0.001, format(round(to.show$pval, 3), nsmall = 3), formatC(to.show$pval, format = "e", digits = 2))
+to.show$pval2 <- ifelse(to.show$pval > 0.05, format(round(to.show$pval, 2), nsmall = 2), to.show$pval2)
+
+important = dplyr::select(to.show, symbol, beta, SE, pval2)
 
 important2 <- important[order(important$pval, decreasing = F),]
 
@@ -107,6 +111,7 @@ show <- rbind(head(spl,5), head(ubq, 5))
 important <- dplyr::select(show, symbol, beta, SE, pval)
 important$beta <- formatC(important$beta, format = "e", digits = 2)
 important$SE <-formatC(important$SE, format = "e", digits = 2)
+
 important$pval <-ifelse(important$pval > 0.001, format(round(important$pval, 3), nsmall = 3)
 , formatC(important$pval, format = "e", digits = 2))
 
@@ -134,11 +139,18 @@ tfs = merge(tfs, tf.scores, by = 'tf')
 important <- dplyr::select(tfs, symbol, beta, SE, pval, T.test.pval)
 important$beta <- formatC(important$beta, format = "e", digits = 2)
 important$SE <- formatC(important$SE, format = "e", digits = 2)
-important$pval <-ifelse(important$pval > 0.001, format(round(important$pval, 3), nsmall = 3)
-, formatC(important$pval, format = "e", digits = 2))
+important$pval2 <- ifelse(important$pval > 0.001, format(round(important$pval, 3), nsmall = 3), formatC(important$pval, format = "e", digits = 2))
+important$pval2 <- ifelse(important$pval > 0.05, format(round(important$pval, 2), nsmall = 2), important$pval2)
 
-important$T.test.pval <-ifelse(important$T.test.pval > 0.001, format(round(important$T.test.pval, 3), nsmall = 3)
+important$pval = important$pval2
+important$pval2 = NULL
+
+important$T.test.pval2 <-ifelse(important$T.test.pval > 0.001, format(round(important$T.test.pval, 3), nsmall = 3)
 , formatC(important$T.test.pval, format = "e", digits = 2))
+important$T.test.pval2 <- ifelse(important$T.test.pval > 0.05, format(round(important$T.test.pval, 2), nsmall = 2), important$T.test.pval2)
+
+important$T.test.pval = important$T.test.pval2
+important$T.test.pval2 = NULL
 
 important = important[order(important$T.test.pval),]
 
