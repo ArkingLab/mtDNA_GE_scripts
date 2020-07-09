@@ -77,14 +77,26 @@ make.forestplot.go <- function(go.term, only.sig.tissues){
 	upper <- c(NA, NA, NA, upper, NA, m1$TE.random + m1$seTE.random)
 	lower <- c(NA, NA, NA, lower, NA, m1$TE.random - m1$seTE.random)
 
+		tval <- m1$TE.random/m1$seTE.random
+  meta.pval <- 2*pt(abs(tval), m1$df.Q, lower=FALSE) 
+    
+go.term.only$pval2 <- ifelse(go.term.only$T.test.pval > 0.001, format(round(go.term.only$T.test.pval, 3), nsmall = 3), formatC(go.term.only$T.test.pval, format = "e", digits = 2))
+go.term.only$pval2 <- ifelse(go.term.only$T.test.pval > 0.05, format(round(go.term.only$T.test.pval, 2), nsmall = 2), go.term.only$pval2)
+
 	# create table text
-	text <-cbind(c(paste0("Forestplot for ", go.term), NA, "Tissue", go.term.only$Tissue, NA, 'Summary (Random)'), 
-		c(NA, NA, 'N', go.term.only$samps, NA, NA), 
-		c(NA, NA,"Beta", formatC(go.term.only$Beta, format = "e", digits = 2), NA, formatC(m1$TE.random, format = "e", digits = 2)))
+xticks = seq(from = -0.5, to = 0.5, by = 0.25)
+
+text <-cbind(c(paste0("Forestplot for ", go.term), NA, "Tissue", go.term.only$Tissue, NA, 'Summary (Random)'), c(NA, NA, 'N', go.term.only$samps, NA, NA), 
+             c(NA, NA,"Effect estimate", formatC(round(go.term.only$Beta, 2), 2, format = "f"), NA, formatC(round(m1$TE.random, 2), 2, format = "f")), 	c(NA, NA,"Standard error", formatC(round(go.term.only$SE, 2), 2, format = "f"), NA, formatC(round(m1$seTE.random, 2), 2, format = "f")), c(NA, NA,"P-value", go.term.only$pval2, NA, formatC(round(meta.pval, 3), 3, format = "f")))
+
+	# create table text
+#	text <-cbind(c(paste0("Forestplot for ", go.term), NA, "Tissue", go.term.only$Tissue, NA, 'Summary (Random)'), 
+		# c(NA, NA, 'N', go.term.only$samps, NA, NA), 
+		# c(NA, NA,"Beta", formatC(go.term.only$Beta, format = "e", digits = 2), NA, formatC(m1$TE.random, format = "e", digits = 2)))
 
 	# draw forestplot
 	# pdf(paste0('/dcs01/arking/arkinglab/active/projects/GTeX/syang/look.version8/R_code/Cross.tissue.look/forestplots/', go.term.title, '.pdf'), width = 13.3, height = 7.5, onefile = F)
-	forestplot(text, means, lower, upper, col=fpColors(box="royalblue",line="darkblue", summary="royalblue"), is.summary=c(TRUE, FALSE, TRUE, rep(FALSE, nrow(go.term.only)+1), TRUE))
+	forestplot(text, means, lower, upper, col=fpColors(box="royalblue",line="darkblue", summary="royalblue"), is.summary=c(TRUE, FALSE, TRUE, rep(FALSE, nrow(go.term.only)+1), TRUE), xticks=xticks, txt_gp = fpTxtGp(ticks=gpar(cex=0.9)))
 
 	# dev.off()
 }
@@ -96,9 +108,19 @@ brain.results = merge(brain.results, numsamps, by.x = 'Tissue', by.y = 'tissue')
 
 
 ```{r}
+pdf(paste0('~/Desktop/HD.pdf'), width = 13.3, height = 3.5, onefile = F)
 make.forestplot.go('KEGG_HUNTINGTONS_DISEASE', brain.results)
+dev.off()
+
+pdf(paste0('~/Desktop/AD.pdf'), width = 13.3, height = 3.5, onefile = F)
 make.forestplot.go('KEGG_ALZHEIMERS_DISEASE', brain.results)
+dev.off()
+
+pdf(paste0('~/Desktop/PD.pdf'), width = 13.3, height = 3.5, onefile = F)
 make.forestplot.go('KEGG_PARKINSONS_DISEASE', brain.results)
+dev.off()
+
+
 
 ```
 

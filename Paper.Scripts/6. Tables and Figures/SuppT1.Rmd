@@ -1,29 +1,52 @@
-# 5.28.2020
-# This script will look at mtRNA-mtDNA correlations in multiple tissues
+# 4.3.2020
+# This script calculates power for observing a significant effect for known correlates.
 
-# load data
+# Aric R^2 values from Ryan:
 ```{r}
-load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_objects/rna.dna.cor.SCALED.rds')
+library(knitr)
+agemult = 0.008552
+ageadj = 0.007883
+
+sexmult = 0.02774
+sexadj = 0.02709
+
+wbcmult = 0.04947
+wbcadj = 0.04883
+
+# Calculate effect size measures
+# https://www.statmethods.net/stats/power.html
+agef2 = agemult/(1-agemult)
+sexf2 = sexmult/(1-sexmult)
+wbcf2 = wbcmult/(1-wbcmult)
 ```
 
-# htmlTables
+
+# Use the pwr package:
 ```{r}
-important = rna.dna.cor
+library(pwr)
 
-important2 <- important[order(important$pval, decreasing = F),]
+# covariates used: age, sex, 
+# u = number of covariates, not including intercept ((mtDNA ~ Neutrophils/SEX/AGE + HSC + Megakaryocytes + COHORT + TRISCHD)) = 4
+# v = n - u - 1  = 418 - 4 - 1 = 391
 
-important = dplyr::select(important2, Tissue, beta, SE, pval)
-important$beta <- formatC(important$beta, format = "e", digits = 2)
-important$SE <-formatC(important$SE, format = "e", digits = 2)
-important$pval <-ifelse(important$pval > 0.001, format(round(important$pval, 3), nsmall = 3)
-, formatC(important$pval, format = "e", digits = 2))
+pwr.f2.test(u = 4, v = 413, f2 = agef2, sig.level = .05)
+pwr.f2.test(u = 4, v = 413, f2 = sexf2, sig.level = .05)
+pwr.f2.test(u = 4, v = 413, f2 = wbcf2, sig.level = .05)
+```
+
+# make a table:
+```{r}
+covs = c('Age', 'Sex (Female)', 'Neutrophils')
+gtex = c(-0.06, 0.14, -0.19)
+aric = c(-0.02, 0.46, -0.14)
+gtexp = c(0.19, 0.17, 5e-5)
+aricp = c(0.004, 9.95e-14,9.97e-16)
+gtexse = c(0.005, 0.108, 0.0047)
+aricse = c(0.005, 0.06, 0.02)
+power = c('28.68%', '79.44%', '97.48%')
+
+show = data.frame(Covariate = covs, gtex = gtex, aric = aric, gtexp= gtexp, aricp = aricp, gtexse = gtexse, aricse = aricse, power = power)
 
 library(htmlTable)
-output <- 
-  matrix(paste("Content", LETTERS[1:16]), 
-         ncol=3, byrow = TRUE)
-
-library(htmlTable)
-htmlTable(important,
-          header =  c('Tissue', '&emsp;&emsp;Effect estimate&emsp;&emsp;', 'Standard error', '&emsp;&emsp;P-value&emsp;&emsp;'), rnames = rep('', nrow(important)))
+htmlTable(show, rnames = rep('', nrow(show)), header = c('Covariate', 'GTEx effect estimate', 'ARIC effect estimate', 'GTEx p-value', 'ARIC p-value', 'GTEx standard error', 'ARIC standard error', 'Power'))
 ```

@@ -54,8 +54,8 @@ knitr::kable(important)
 # wanna make fancy tables
 ```{r}
 important.save <- important
-important$beta <- formatC(important$beta, format = "e", digits = 2)
-important$SE <-formatC(important$SE, format = "e", digits = 2)
+important$beta <- formatC(round(important$beta, 2), 2, format = "f")
+important$SE <- formatC(round(important$SE, 2), 2, format = "f")
 to.show <- important
 
 to.show$pval2 <- ifelse(to.show$pval > 0.001, format(round(to.show$pval, 3), nsmall = 3), formatC(to.show$pval, format = "e", digits = 2))
@@ -109,8 +109,9 @@ ggplot(ubq, aes(-log10(pval))) + geom_rug() + geom_density()
 show <- rbind(head(spl,5), head(ubq, 5))
 
 important <- dplyr::select(show, symbol, beta, SE, pval)
-important$beta <- formatC(important$beta, format = "e", digits = 2)
-important$SE <-formatC(important$SE, format = "e", digits = 2)
+important$beta <- formatC(round(important$beta, 2), 2, format = "f")
+important$SE <- formatC(round(important$SE, 2), 2, format = "f")
+to.show <- important
 
 important$pval <-ifelse(important$pval > 0.001, format(round(important$pval, 3), nsmall = 3)
 , formatC(important$pval, format = "e", digits = 2))
@@ -137,8 +138,8 @@ tfs$tf = c('GABPB', 'YY1', 'E4F1', 'ELK1', 'GABPB', 'NRF1')
 tfs = merge(tfs, tf.scores, by = 'tf')
 
 important <- dplyr::select(tfs, symbol, beta, SE, pval, T.test.pval)
-important$beta <- formatC(important$beta, format = "e", digits = 2)
-important$SE <- formatC(important$SE, format = "e", digits = 2)
+important$beta <- formatC(round(important$beta, 2), 2, format = "f")
+important$SE <- formatC(round(important$SE, 2), 2, format = "f")
 important$pval2 <- ifelse(important$pval > 0.001, format(round(important$pval, 3), nsmall = 3), formatC(important$pval, format = "e", digits = 2))
 important$pval2 <- ifelse(important$pval > 0.05, format(round(important$pval, 2), nsmall = 2), important$pval2)
 
@@ -170,22 +171,29 @@ require(meta)
 
 # get means and upper/lower limits
 means <- mt$beta
-upper <- mt$beta+mt$SE
-lower <- mt$beta-mt$SE
+upper1 <- mt$beta+mt$SE
+lower1 <- mt$beta-mt$SE
 
 # formatting
-means <- c(NA, NA, NA, means, NA)
-upper <- c(NA, NA, NA, upper, NA)
-lower <- c(NA, NA, NA, lower, NA)
+means <- c(NA, means, NA)
+se <- c(NA, mt$SE, NA)
+upper <- c(NA, upper1, NA)
+lower <- c(NA, lower1, NA)
+
+# Dan wants p-value...
+mt$pval2 <- ifelse(mt$pval > 0.001, format(round(mt$pval, 3), nsmall = 3), formatC(mt$pval, format = "e", digits = 2))
+mt$pval2 <- ifelse(mt$pval > 0.05, format(round(mt$pval, 2), nsmall = 2), mt$pval2)
+
+
 
 # create table text
-text <-cbind(c("36 MT-encoded genes in whole blood", NA, "Genes", mt$symbol, NA), c(NA, NA,"Effect estimate", formatC(mt$beta, format = "e", digits = 2), NA))
+text <-cbind(c("MT-encoded genes", mt$symbol, NA), c("Effect estimate", formatC(round(mt$beta, 2), 2, format = "f"), NA), c("Standard error", formatC(round(mt$SE, 2), 2, format = "f"), NA), c("P-value", mt$pval2, NA))
 
 	# draw forestplot
 pdf(paste0('~/Desktop/mtrna.forestplot.pdf'), width = 10, height = 8, onefile = F)
 	
 xticks = seq(from = -0.05, to = 0.3, by = 0.05)
-forestplot(text, means, lower, upper, col=fpColors(box="royalblue",line="darkblue", summary="royalblue"), is.summary=c(TRUE, FALSE, TRUE, rep(FALSE, nrow(mt)+1), TRUE),
+forestplot(text, means, lower, upper, col=fpColors(box="royalblue",line="darkblue", summary="royalblue"), is.summary=c(TRUE, FALSE, FALSE, rep(FALSE, nrow(mt)+1), TRUE),
        txt_gp = fpTxtGp(ticks=gpar(cex=0.9)), new_page = TRUE, xticks = xticks)
 
 dev.off()
