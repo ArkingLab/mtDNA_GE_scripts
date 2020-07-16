@@ -52,22 +52,22 @@ w.perm$Sig = ifelse(w.perm$Spear.Correlation < w.perm$lowerCI | w.perm$Spear.Cor
 for(i in 1: nrow(w.perm)){
   if(w.perm$Sig[i] == 1){
     print(w.perm$Tissue[i])
-    w.perm$lowerCI[i] = format(round(as.numeric(w.perm$lowerCI[i]), 3))
-    w.perm$upperCI[i] = format(round(as.numeric(w.perm$upperCI)[i], 3))
+    w.perm$lowerCI[i] = format(round(as.numeric(w.perm$lowerCI[i]), 3), nsmall = 3)
+    w.perm$upperCI[i] = format(round(as.numeric(w.perm$upperCI)[i], 3), nsmall = 3)
     w.perm$CI[i] = paste0(w.perm$lowerCI[i], ';', w.perm$upperCI[i])
 
-    w.perm$Spear.Correlation[i] = format(round(as.numeric(w.perm$Spear.Correlation[i]), 3))
-    w.perm$mean[i] = format(round(as.numeric(w.perm$mean[i]), 3))
+    w.perm$Spear.Correlation[i] = format(round(as.numeric(w.perm$Spear.Correlation[i]), 3), nsmall = 3)
+    w.perm$mean[i] = format(round(as.numeric(w.perm$mean[i]), 3), nsmall = 3)
 
     # bold significant entries
     w.perm[i,] = paste0('<b>', w.perm[i,], '</b>')
 
   } else{
-    w.perm$lowerCI[i] = format(round(as.numeric(w.perm$lowerCI[i]), 3))
-    w.perm$upperCI[i] = format(round(as.numeric(w.perm$upperCI)[i], 3))
+    w.perm$lowerCI[i] = format(round(as.numeric(w.perm$lowerCI[i]), 3), nsmall = 3)
+    w.perm$upperCI[i] = format(round(as.numeric(w.perm$upperCI)[i], 3), nsmall = 3)
     w.perm$CI[i] = paste0(w.perm$lowerCI[i], ';', w.perm$upperCI[i])
-    w.perm$Spear.Correlation[i] = format(round(as.numeric(w.perm$Spear.Correlation[i]), 3))
-    w.perm$mean[i] = format(round(as.numeric(w.perm$mean[i]), 3))
+    w.perm$Spear.Correlation[i] = format(round(as.numeric(w.perm$Spear.Correlation[i]), 3), nsmall = 3)
+    w.perm$mean[i] = format(round(as.numeric(w.perm$mean[i]), 3), nsmall = 3)
   }
 }
 
