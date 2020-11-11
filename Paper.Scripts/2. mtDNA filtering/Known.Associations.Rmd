@@ -22,8 +22,18 @@ final.mito$noSEX <- scale(resid(lm(mtDNA ~ Neutrophils + HSC + Megakaryocytes + 
 final.mito$noNEUT <- scale(resid(lm(mtDNA ~ HSC + Megakaryocytes + COHORT + TRISCHD + ns(AGE,2) + SEX, data = final.mito)))
 ```
 
+# plot for age:
+```{r}
+age = ggplot(final.mito, aes(AGE, noAGE)) + geom_point() + geom_smooth(method = 'lm') + theme_classic() + xlab('Age at blood draw') + ylab('Adjusted mtDNA-CN')
+sex = ggplot(final.mito, aes(SEX, noSEX)) + geom_boxplot() + theme_classic() + xlab('Biological sex') + ylab('Adjusted mtDNA-CN') + scale_x_discrete(labels = c('Male','Female'))
+
+library(patchwork)
+age + sex
+```
+
 # get associations for each:
 ```{r}
+lm(noAGE ~ ns((AGE),2), data = final.mito) %>% summary
 lm(noAGE ~ ns(scale(AGE),2), data = final.mito) %>% summary
 library(ggplot2)
 ggplot(final.mito, aes(AGE, noAGE)) + geom_point()
