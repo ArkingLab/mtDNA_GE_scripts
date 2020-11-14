@@ -1,9 +1,13 @@
 # 6.1.2020
+# Updated 11.11.2020
+
 # Make a table of UKB results for manuscript
 ```{r setup}
 library(data.table)
 library(knitr)
 library(meta)
+library(htmlTable)
+library(yangR)
 wdir <- paste0('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/')
 setwd(wdir)
 opts_knit$set(root.dir = wdir)
@@ -11,34 +15,62 @@ opts_knit$set(root.dir = wdir)
 
 # load results files
 ```{r}
-load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_objects/UKB/ad.rds')
-load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_objects/UKB/pd.rds')
-load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_objects/UKB/dem.rds')
-load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_objects/UKB/nd.rds')
+load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_objects/UKB/show_inc.rds')
+load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_objects/UKB/show_prev.rds')
 ```
 
 # format for an htmlTable
 ```{r}
-# 63 incident pd
-# 41 incident ad
-# 74 incident dementia (no AD)
-all = rbind(pd[2,], ad[2,], dem[2,], nd[2,])
-rownames(all) = c('PD', 'AD', 'Dementia', 'ND')
-all$`exp(coef)` = round(as.numeric(as.character(all$`exp(coef)`)), 2)
-all$`Pr(>|z|)` = round(as.numeric(as.character(all$`Pr(>|z|)`)), 3)
-all$Cases = c('63/39,044', '41/39,100', '74/39,048', '161/39,030')
-# all$ConfInt = c('0.5802;0.9735', '0.4353;0.8104', '0.6352,1.021')
-all$ConfInt = c('0.60;0.99', '0.44;0.81', '0.65,1.02', '0.66;0.90')
+show_inc = as.data.frame(show_inc)
+show_prev = as.data.frame(show_prev)
+
+# Dan says use two sig digits!!!
+formatbeta <- function (beta) 
+{
+    formatC(round(beta, 3), 2, format = "f")
+}
+
+show_inc$Lower = formatbeta(as.numeric(as.character(show_inc$Lower)))
+show_inc$Upper = formatbeta(as.numeric(as.character(show_inc$Upper)))
+show_inc$`Hazard ratio` = formatbeta(as.numeric(as.character(show_inc$`Hazard ratio`)))
+show_inc$`P-value` = formatpval(as.numeric(as.character(show_inc$`P-value`)))
+show_inc$CI = paste0(show_inc$Lower, ';', show_inc$Upper)
+
+show_prev$Lower = formatbeta(as.numeric(as.character(show_prev$Lower)))
+show_prev$Upper = formatbeta(as.numeric(as.character(show_prev$Upper)))
+show_prev$`Hazard ratio` = formatbeta(as.numeric(as.character(show_prev$`Hazard ratio`)))
+show_prev$`P-value` = formatpval(as.numeric(as.character(show_prev$`P-value`)))
+show_prev$CI = paste0(show_prev$Lower, ';', show_prev$Upper)
+
+htmlTable(show_inc[,c(1, 2, 7, 5, 6)], rnames = rep("", nrow(show_inc)), header =  c('Disease', '&nbsp;Hazard ratio&nbsp;', '&nbsp;Confidence interval&nbsp;', '&nbsp;Number of cases&nbsp;', '&nbsp;P-value&nbsp;'))
+
+htmlTable(rbind(show_prev[,c(1, 2, 7, 5, 6)], show_inc[,c(1, 2, 7, 5, 6)]), rnames = rep("", 8), header =  c('Disease', '&nbsp;Hazard ratio&nbsp;', '&nbsp;Confidence interval&nbsp;', '&nbsp;Number of cases&nbsp;', '&nbsp;P-value&nbsp;'))
 ```
 
-# htmlTable
+# For reviewers:
 ```{r}
-all$Disease = c("Parkinson's disease", "Alzheimer's disease", "Dementia (excluding AD)", "Combined neurodegenerative disease")
-show = dplyr::select(all, Disease, `exp(coef)`, ConfInt, Cases, `Pr(>|z|)`)
+load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_objects/UKB/show_inc_all.rds')
 
-library(htmlTable)
-htmlTable(show,
-          header =  c('Disease', '&nbsp;Hazard ratio&nbsp;', '&nbsp;Confidence interval&nbsp;', '&nbsp;Number of cases&nbsp;', '&nbsp;P-value&nbsp;'),
-          rnames = rep('', nrow(show)))
 
+formatbeta <- function (beta) 
+{
+  formatC(round(beta, 3), 2, format = "f")
+}
+
+show_inc_all$Lower = formatbeta(as.numeric(as.character(show_inc_all$Lower)))
+show_inc_all$Upper = formatbeta(as.numeric(as.character(show_inc_all$Upper)))
+show_inc_all$`Hazard ratio` = formatbeta(as.numeric(as.character(show_inc_all$`Hazard ratio`)))
+show_inc_all$`P-value` = formatpval(as.numeric(as.character(show_inc_all$`P-value`)))
+show_inc_all$CI = paste0(show_inc_all$Lower, ';', show_inc_all$Upper)
+
+show_inc_all$Method = rep(c('Array', 'Whole Exome Sequence'), 4)
+
+array = subset(show_inc_all, Method == 'Array')
+wes = subset(show_inc_all, Method == 'Whole Exome Sequence')
+
+both = merge(array, wes, by = 'Disease', suffixes = c('_array', '_wes'))
+show = both[,c(1, 2, 7, 6, 9, 14, 13, 12)]
+
+
+htmlTable(show[c(4, 1, 2, 3),-1], rnames = show$Disease, cgroup = c('Array metric', 'Whole exome sequence metric', ''), n.cgroup = c(3,3,1), header = c('Hazard ratio', 'Confidence interval', 'P-value', 'Hazard ratio', 'Confidence interval', 'P-value', 'Cases/controls'))
 ```

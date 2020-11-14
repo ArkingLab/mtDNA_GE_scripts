@@ -1,7 +1,8 @@
-# 6.15.2020
+# 6.15.2020 --> 11.11.2020 updated to: UKB_Analysis.R 
 # Adapted from Dan Arking
 # Do on command line
 # Make a table for manuscript
+
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)

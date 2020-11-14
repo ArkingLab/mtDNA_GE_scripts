@@ -24,6 +24,10 @@ final.mito$noNEUT <- scale(resid(lm(mtDNA ~ HSC + Megakaryocytes + COHORT + TRIS
 
 # plot for age:
 ```{r}
+# get p-values:
+lm(noAGE ~ AGE, data = final.mito) %>% summary %>% coef
+lm(noSEX ~ SEX, data = final.mito) %>% summary %>% coef
+
 age = ggplot(final.mito, aes(AGE, noAGE)) + geom_point() + geom_smooth(method = 'lm') + theme_classic() + xlab('Age at blood draw') + ylab('Adjusted mtDNA-CN')
 sex = ggplot(final.mito, aes(SEX, noSEX)) + geom_boxplot() + theme_classic() + xlab('Biological sex') + ylab('Adjusted mtDNA-CN') + scale_x_discrete(labels = c('Male','Female'))
 
@@ -44,7 +48,28 @@ lm(noSEX ~ SEX, data = final.mito) %>% summary
 # lm(mtDNA ~ AGE, data = final.mito) %>% summary
 pairs(~AGE + SEX + Neutrophils + HSC + Megakaryocytes, data = final.mito, lower.panel=twolines, diag.panel=mydiag.panel, upper.panel=panel.cor, label.pos=0.5, main="Correlation matrix of PCs and covariates", labels = c('age', 'sex', 'neutrophils', 'hsc', 'megakaryocytes'))
 
+lm(noAGE ~ scale(AGE), data = final.mito) %>% summary
+lm(noSEX ~ SEX, data = final.mito) %>% summary
 lm(noNEUT ~ scale(Neutrophils), data = final.mito) %>% summary
+```
+
+
+# make a table:
+```{r}
+covs = c('Age', 'Sex (Female)', 'Neutrophils')
+gtex = c(-0.06, 0.15, -0.19)
+gtexse = c(0.005, 0.102, 0.005)
+gtexp = c(0.18, 0.14, 8.4e-5)
+
+aric = c(-0.02, 0.46, -0.14)
+aricp = c(0.004, 9.95e-14,9.97e-16)
+aricse = c(0.005, 0.06, 0.02)
+power = c('28.68%', '79.44%', '97.48%')
+
+show = data.frame(Covariate = covs, gtex = gtex, aric = aric, gtexp= gtexp, aricp = aricp, gtexse = gtexse, aricse = aricse, power = power)
+
+library(htmlTable)
+htmlTable(show, rnames = rep('', nrow(show)), header = c('Covariate', 'GTEx effect estimate', 'ARIC effect estimate', 'GTEx p-value', 'ARIC p-value', 'GTEx standard error', 'ARIC standard error', 'Power'))
 ```
 
 # for a table:
