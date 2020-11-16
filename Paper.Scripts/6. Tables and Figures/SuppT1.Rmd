@@ -1,52 +1,55 @@
-# 4.3.2020
-# This script calculates power for observing a significant effect for known correlates.
+# 3.4.2020
 
-# Aric R^2 values from Ryan:
+# This script will look at known associations between mtDNA-CN and covariates
+
+# load mtDNA-CN file
 ```{r}
-library(knitr)
-agemult = 0.008552
-ageadj = 0.007883
-
-sexmult = 0.02774
-sexadj = 0.02709
-
-wbcmult = 0.04947
-wbcadj = 0.04883
-
-# Calculate effect size measures
-# https://www.statmethods.net/stats/power.html
-agef2 = agemult/(1-agemult)
-sexf2 = sexmult/(1-sexmult)
-wbcf2 = wbcmult/(1-wbcmult)
+load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_objects/final.mito.rds')
 ```
 
 
-# Use the pwr package:
+# Adjust for everything BUT age, sex, and Neutrophils
 ```{r}
-library(pwr)
+library(splines)
 
-# covariates used: age, sex, 
-# u = number of covariates, not including intercept ((mtDNA ~ Neutrophils/SEX/AGE + HSC + Megakaryocytes + COHORT + TRISCHD)) = 4
-# v = n - u - 1  = 418 - 4 - 1 = 391
+final.mito$noAGE <- scale(resid(lm(mtDNA ~ Neutrophils + HSC + Megakaryocytes + COHORT + TRISCHD + SEX, data = final.mito)))
+final.mito$noSEX <- scale(resid(lm(mtDNA ~ Neutrophils + HSC + Megakaryocytes + COHORT + TRISCHD + ns(AGE,2), data = final.mito)))
+final.mito$noNEUT <- scale(resid(lm(mtDNA ~ HSC + Megakaryocytes + COHORT + TRISCHD + ns(AGE,2) + SEX, data = final.mito)))
+```
 
-pwr.f2.test(u = 4, v = 413, f2 = agef2, sig.level = .05)
-pwr.f2.test(u = 4, v = 413, f2 = sexf2, sig.level = .05)
-pwr.f2.test(u = 4, v = 413, f2 = wbcf2, sig.level = .05)
+
+# get associations for each:
+```{r}
+lm(noAGE ~ ns((AGE),2), data = final.mito) %>% summary
+lm(noAGE ~ ns(scale(AGE),2), data = final.mito) %>% summary
+library(ggplot2)
+ggplot(final.mito, aes(AGE, noAGE)) + geom_point()
+
+lm(noAGE ~ scale(AGE), data = final.mito) %>% summary
+lm(noSEX ~ SEX, data = final.mito) %>% summary
+# lm(mtDNA ~ SEX, data = final.mito) %>% summary
+# lm(mtDNA ~ AGE, data = final.mito) %>% summary
+pairs(~AGE + SEX + Neutrophils + HSC + Megakaryocytes, data = final.mito, lower.panel=twolines, diag.panel=mydiag.panel, upper.panel=panel.cor, label.pos=0.5, main="Correlation matrix of PCs and covariates", labels = c('age', 'sex', 'neutrophils', 'hsc', 'megakaryocytes'))
+
+lm(noAGE ~ scale(AGE), data = final.mito) %>% summary
+lm(noSEX ~ SEX, data = final.mito) %>% summary
+lm(noNEUT ~ scale(Neutrophils), data = final.mito) %>% summary
 ```
 
 # make a table:
 ```{r}
 covs = c('Age', 'Sex (Female)', 'Neutrophils')
-gtex = c(-0.06, 0.14, -0.19)
-aric = c(-0.02, 0.46, -0.14)
-gtexp = c(0.19, 0.17, 5e-5)
-aricp = c(0.004, 9.95e-14,9.97e-16)
+gtex = c(-0.06, 0.15, -0.19)
 gtexse = c(0.05, 0.10, 0.05)
-aricse = c(0.01, 0.06, 0.02)
+gtexp = c(0.18, 0.14, 8.4e-5)
+
+aric = c(-0.02, 0.46, -0.14)
+aricp = c(0.004, 9.95e-14,9.97e-16)
+aricse = c(0.005, 0.06, 0.02)
 power = c('28.68%', '79.44%', '97.48%')
 
-show = data.frame(Covariate = covs, gtex = gtex, gtexse = gtexse, gtexp = gtexp, aric = aric, aricse = aricse, aricp = aricp, power = power)
+show = data.frame(Covariate = covs, gtex = gtex, gtexse = gtexse, gtexp= gtexp, aric = aric, aricse = aricse, aricp= aricp, power = power)
 
 library(htmlTable)
-htmlTable(show, rnames = rep('', nrow(show)), header = c('Covariate', 'GTEx effect size estimate', 'GTEx standard error', 'GTEx p-value', 'ARIC effect size estimate', 'ARIC standard error', 'ARIC p-value', 'Power'))
+htmlTable(show[,-1], rnames = show[,1], cgroup = c('GTEx', 'ARIC', ''), n.cgroup = c(3, 3, 1), header = c('Effect estimate', 'Standard error', 'P-value', 'Effect estimate', 'Standard error', 'P-value', 'Power'))
 ```

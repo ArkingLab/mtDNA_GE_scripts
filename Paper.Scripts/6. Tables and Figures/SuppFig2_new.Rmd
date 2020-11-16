@@ -1,0 +1,33 @@
+# This script will make plots for GTEx mtDNA-CN and age/sex
+```{r}
+load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_objects/final.mito.rds')
+library(splines)
+library(magrittr)
+library(ggplot2)
+
+final.mito$noAGE <- scale(resid(lm(mtDNA ~ Neutrophils + HSC + Megakaryocytes + COHORT + TRISCHD + SEX, data = final.mito)))
+final.mito$noSEX <- scale(resid(lm(mtDNA ~ Neutrophils + HSC + Megakaryocytes + COHORT + TRISCHD + ns(AGE,2), data = final.mito)))
+
+lm(noAGE ~ AGE, data = final.mito) %>% summary %>% coef
+lm(noSEX ~ SEX, data = final.mito) %>% summary %>% coef
+
+age = ggplot(final.mito, aes(AGE, noAGE)) + geom_point() + geom_smooth(method = 'lm') + theme_classic() + xlab('Age at blood draw') + ylab('Adjusted mtDNA-CN')
+sex = ggplot(final.mito, aes(SEX, noSEX)) + geom_boxplot() + theme_classic() + xlab('Biological sex') + ylab('Adjusted mtDNA-CN') + scale_x_discrete(labels = c('Male','Female'))
+
+library(grid)
+library(patchwork)
+sex + 
+new = age + sex
+
+
+empty = ggplot(final.mito, aes(AGE, noAGE)) + geom_blank()
+grob <- grobTree(textGrob(paste0("P-value for age:"), x=0.1,  y=0.95, hjust=0))
+
+new + theme(plot.margin=unit(c(1,1,1.5,1.2),"cm"))
+new + annotation_custom(grob)
+  
+  				
+					gp=gpar(col="black", fontsize=14)))
+				print(p + annotation_custom(grob))
+
+```
