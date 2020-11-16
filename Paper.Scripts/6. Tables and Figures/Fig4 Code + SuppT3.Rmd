@@ -21,6 +21,7 @@ ggplot(all.lambdas, aes(Lambda)) + geom_density() + geom_rug() + geom_rug(data =
 sig <- subset(lambda.frame, Lambda > all.lambdas$Lambda[nrow(all.lambdas)*0.05])
 nrow(sig)
 ```
+
 # table time
 ```{r}
 library(htmlTable)

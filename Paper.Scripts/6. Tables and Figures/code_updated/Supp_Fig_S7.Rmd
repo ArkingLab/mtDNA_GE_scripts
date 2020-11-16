@@ -1,0 +1,64 @@
+# cross-tissue mtRNA expression plots:
+```{r}
+
+# server-side commands:
+load('/dcs01/arking/arkinglab/active/projects/GTeX/syang/look.version8/R_objects/all_tissuesv8.rds')
+library(analyzeR)
+library(yangR)
+
+all_counts = as.data.frame(fread('/dcs01/arking/arkinglab/resources/GTeX/v8_GTEx_counts/GTEx_Analysis_2017-06-05_v8_RNASeQCv1.1.9_gene_tpm.gct'))
+phenotypes <- as.data.frame(fread('/dcs01/arking/arkinglab/resources/GTeX/dbGaP_GTEx_phs000424.v8.p2/files/GTEx_Analysis_2017-06-05_v8_Annotations_SampleAttributesDS.txt'))
+
+# extract MT genes:
+load('/dcs01/arking/arkinglab/active/projects/GTeX/syang/look.version8/R_objects/v8.gene_key.rds')
+mt = gene_key$gene_id[grep('^MT-', gene_key$symbol)]
+
+mt_all = all_counts[which(all_counts$Name %in% mt),]
+mt_all_t = as.data.frame(t(mt_all))
+
+colnames(mt_all_t) = unlist(mt_all_t[2,])
+mt_all_t = mt_all_t[c(-1, -2),]
+
+# melt
+library(tidyverse)
+mt_all_t$ID = rownames(mt_all_t)
+
+# m = pivot_longer(mt_all_t, cols = starts_with("MT"))
+tiss = dplyr::select(phenotypes, SAMPID, SMTSD)
+w.tiss = merge(m, tiss, by.x = "ID", by.y = "SAMPID")
+# library(ggplot2)
+
+mt_all_t$ID = NULL
+no_runs <- apply(mt_all_t, 2, as.character)
+no_runs <- apply(no_runs, 2, as.numeric)
+mt_all_t$median = apply(no_runs, 1, median, na.rm = T)
+
+mt_all_t$ID = rownames(mt_all_t)
+w.tiss = merge(mt_all_t, tiss, by.x = "ID", by.y = "SAMPID")
+
+w.tiss$median_scale = scale(w.tiss$median)
+w.tiss_try = subset(w.tiss, SMTSD %in% c('Whole Blood', "Brain - Hippocampus")) 
+
+ggplot(w.tiss, aes(SMTSD, median_scale, col = SMTSD)) + geom_boxplot() + theme_classic() + ylab('Scaled median mtRNA expression') + xlab('Tissue') + theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) + theme(legend.position = "none")
+save(w.tiss, file = '/dcs01/arking/arkinglab/active/projects/GTeX/syang/look.version8/R_objects/scaled_mtRNA.rds')
+
+# local-side changes:
+load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_objects/scaled_mtRNA.rds')
+
+separate(w.tiss, SMTSD, sep = ' - ', into = c('bigtiss', 'litletiss'))-> try
+
+w.tiss$Main_tissue = try$bigtiss
+w.tiss$Main_tissue = as.factor(w.tiss$Main_tissue) 
+
+plot = ggplot(w.tiss, aes(SMTSD, median_scale, col = Main_tissue)) + geom_boxplot() + theme_classic() + ylab('Scaled median mtRNA expression') + xlab('Tissue') + theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust=1)) + theme(legend.position = "none") 
+
+colourCount = length(unique(w.tiss$Main_tissue))
+getPalette = colorRampPalette(brewer.pal(8, "Set2"))
+
+# randomize colors
+set.seed(1)
+plot + scale_color_manual(values = sample(getPalette(colourCount)))
+
+
+#  + theme(plot.margin=unit(c(1,1,1,1),"cm"))
+```

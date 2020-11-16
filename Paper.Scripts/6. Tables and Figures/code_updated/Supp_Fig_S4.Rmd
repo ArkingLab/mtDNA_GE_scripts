@@ -1,0 +1,52 @@
+
+# load with.gene.rds
+```{r}
+load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/Whole Blood/with.gene.rds')
+```
+
+
+# Make a forestplot with all indiv genes
+```{r}
+mt <- with.gene[grep('^MT-', with.gene$symbol),]
+
+require(forestplot)
+require(meta)
+
+# get means and upper/lower limits
+means <- mt$beta
+upper1 <- mt$beta+mt$SE
+lower1 <- mt$beta-mt$SE
+
+# formatting
+means <- c(NA, means, NA)
+se <- c(NA, mt$SE, NA)
+upper <- c(NA, upper1, NA)
+lower <- c(NA, lower1, NA)
+
+# Dan wants p-value...
+mt$pval2 <- ifelse(mt$pval > 0.001, format(round(mt$pval, 3), nsmall = 3), formatC(mt$pval, format = "e", digits = 2))
+mt$pval2 <- ifelse(mt$pval > 0.05, format(round(mt$pval, 2), nsmall = 2), mt$pval2)
+
+
+
+# create table text
+text <-cbind(c("MT-encoded genes", mt$symbol, NA), c("Effect estimate", formatC(round(mt$beta, 2), 2, format = "f"), NA), c("Standard error", formatC(round(mt$SE, 2), 2, format = "f"), NA), c("P-value", mt$pval2, NA))
+
+
+	# draw forestplot
+pdf(paste0('~/Desktop/mtrna.forestplot.pdf'), width = 10, height = 8, onefile = F)
+	
+xticks = seq(from = -0.05, to = 0.3, by = 0.05)
+
+forestplot(text, means, lower, upper, col=fpColors(box="royalblue",line="darkblue", summary="royalblue"), is.summary=c(TRUE, FALSE, FALSE, rep(FALSE, nrow(mt)+1), TRUE),
+       txt_gp = fpTxtGp(ticks=gpar(cex=0.9), label = list(gpar(fontface = 3),
+                                     gpar(fontface = 1), gpar(fontface = 1), gpar(fontface = 1))), new_page = TRUE, xticks = xticks)
+
+dev.off()
+
+mt.care <- dplyr::select(mt, symbol, beta, pval)
+mt.care$beta <- formatC(mt.care$beta, format = "e", digits = 2)
+mt.care$pval <- formatC(mt.care$pval, format = "e", digits = 2)
+
+kable_styling(kable(mt.care, row.names = F), full_width = F)
+```

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #$ -cwd
-#$ -l mem_free=6G,h_vmem=7G
+#$ -l mem_free=9G,h_vmem=10G
 #$ -e errors/
 #$ -o outputs/
 
@@ -16,7 +16,10 @@ module load R/3.6.1
 ID=$SGE_TASK_ID
 echo $ID
 
-Rscript ./permute.GO.all.tissues.R ${ID}
+for i in {1..9}
+do
+   Rscript ./permute.GO.all.tissues_1000.R ${ID} $i
+done
 
 # qsub -t 1-54 -tc 10 Rsub.4.sh
 

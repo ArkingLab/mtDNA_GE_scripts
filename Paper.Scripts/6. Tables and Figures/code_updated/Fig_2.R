@@ -70,7 +70,6 @@ one.data$dispensability <- as.numeric( as.character(one.data$dispensability) );
 # --------------------------------------------------------------------------
 # Names of the axes, sizes of the numbers and letters, names of the columns,
 # etc. can be changed below
-
 p1 <- ggplot( data = one.data );
 # changed plot size to be smaller!
 p1 <- p1 + geom_point( aes( plot_X, plot_Y, colour = log10_p_value, size = (plot_size/2)), alpha = I(0.6) ) + scale_size_area();
@@ -84,7 +83,7 @@ terms.include <- c('mitochondrion', 'ubiquitin ligase complex', 'spliceosomal co
 ex <- subset(one.data, description %in% terms.include)
 
 p1 <- p1 + geom_text( data = ex, aes(plot_X, plot_Y, label = description), colour = I(alpha("black", 0.85)), size = 3 );
-p1 <- p1 + labs (y = "semantic space x", x = "semantic space y");
+p1 <- p1 + labs (y = "semantic space y", x = "semantic space x");
 p1 <- p1 + theme(legend.key = element_blank()) ;
 one.x_range = max(one.data$plot_X) - min(one.data$plot_X);
 one.y_range = max(one.data$plot_Y) - min(one.data$plot_Y);
@@ -97,5 +96,5 @@ ex2 <- subset(one.data, description %in% terms.include2)
 p1 <- p1 + geom_text( data = ex2, aes(plot_X, plot_Y, label = description), colour = I(alpha("black", 0.85)), size = 3 );
 
 # remove the legend size and change color title....
-p1 + guides(size = F) + labs(col = '-log 10 P-value') + theme_classic()
+p1 + guides(size = F) + labs(col = 'log 10 P-value') + theme_classic()
 

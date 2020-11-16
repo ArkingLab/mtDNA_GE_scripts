@@ -1,0 +1,401 @@
+# read in files
+```{r setup}
+library(readr)
+library(lme4)
+library(knitr)
+library(splines)
+library(yangR)
+library(data.table)
+library(ggplot2)
+
+wd <- '/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/'
+
+setwd(wd)
+opts_knit$set(root.dir = wd)
+
+sra_run_table <- read.csv('data_files/SraRunTable.txt', header = T, sep = '\t')
+sra_run_table <- subset(sra_run_table, Assay_Type == 'WGS')
+
+sra_run_table_gtex_and_run <- sra_run_table
+
+# these MT stats are from the new remapped bams (after MToolbox NUMT removal).  this file was made with this script: /dcs01/arking/arkinglab/active/projects/GTeX/syang/data_files/MT_stats/getting_MT_stats.Rmd
+all_MT_stats <- read.csv('data_files/MT_stats/your_MT_stats.csv')
+
+# these MT stats are from the new remapped bams (from Ryan).  this file was made with this script: /dcs01/arking/arkinglab/active/projects/GTeX/syang/data_files/MT_stats/getting_MT_stats.Rmd
+# all_MT_stats <- read.csv('data_files/MT_stats/your_MT_stats.ryan.remap.csv')
+
+# this file has read depths before NUMT removal.  You don't use read depths anyways, so it should be okay.
+# read_depth <- read.csv('data_files/MT_stats/my_mt_read_depths.csv', header = TRUE)
+```
+
+<!-- # merge the read depth info with the mtDNA-CN info -->
+<!-- ```{r} -->
+<!-- all_MT_stats2 <- merge(all_MT_stats, read_depth, by.x = 'run', by.y = 'Run') -->
+<!-- all_MT_stats <- all_MT_stats2 -->
+<!-- ``` -->
+
+
+# filtering based on phenotypes
+```{r}
+indiv_count <- as.data.frame(matrix(nrow = 1, ncol = 2))
+colnames(indiv_count) <- c('Number.removed', 'Reason.for.removal')
+indiv_count[1,] <- c(nrow(all_MT_stats), 'Started with')
+
+# merge the MT_stats run info with the GTEx subject ID
+all_MT_stats_with_GTEx <- merge(all_MT_stats, sra_run_table_gtex_and_run, all.x = T, by.x = 'run', by.y = 'Run')
+any(is.na(all_MT_stats_with_GTEx$submitted_subject_id))
+
+# take out all mtDNA-CNs obtained not from blood (13)
+only_whole_blood <- subset(all_MT_stats_with_GTEx, histological_type == 'Blood')
+indiv_count <- rbind(indiv_count, c(nrow(subset(all_MT_stats_with_GTEx, histological_type != 'Blood')), 'Not blood'))
+
+# you're missing two people! whose bams did not go through.
+
+only_whole_blood2 <- only_whole_blood
+
+align_indices <- getAllDups(only_whole_blood2$total_reads)
+only_whole_blood2$total_reads[align_indices]
+
+if(length(align_indices) != 0){only_whole_blood3 <- only_whole_blood2[-align_indices,]} else{ only_whole_blood3 <- only_whole_blood2}
+
+only_whole_blood3$unalign_percent <- only_whole_blood3$unaligned_counts/only_whole_blood3$total_reads * 100
+
+indiv_count <- rbind(indiv_count, c(length(align_indices), 'Same counts as other samples'))
+
+# take out samples with high unaligned percentages (7)
+cutoff <- mean(na.omit(only_whole_blood3$unalign_percent)) + 4*sd(na.omit(only_whole_blood3$unalign_percent))
+# 
+high_unaligned <- which(only_whole_blood3$unalign_percent > cutoff)
+only_whole_blood3[high_unaligned,]
+nrow(only_whole_blood3[high_unaligned,])
+only_whole_blood4 <- only_whole_blood3[-high_unaligned,]
+
+indiv_count <- rbind(indiv_count, c(length(high_unaligned), 'High unaligned percent (> 4 SD)'))
+
+# take out people who are outliers in MT count
+cutoff <- mean(na.omit(only_whole_blood4$mito_percents)) + 4*sd(na.omit(only_whole_blood4$mito_percents))
+high_unaligned <- which(only_whole_blood4$mito_percents > cutoff)
+only_whole_blood4[high_unaligned,]
+nrow(only_whole_blood4[high_unaligned,])
+only_whole_blood5 <- only_whole_blood4[-high_unaligned,]
+
+indiv_count <- rbind(indiv_count, c(length(high_unaligned), 'Outliers in mito percent (> 4 SD)'))
+indiv_count.save <- indiv_count
+plot(density(only_whole_blood5$mito_percents))
+```
+
+# add phenotype information (subject AND sample level)
+```{r}
+# SUBJECT
+getwd()
+phenotype <- read_delim("/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/data_files/GTEx_v7_Subject_Phenotypes.GRU.n635_AnalysisFreeze.txt", "\t", escape_double = FALSE, trim_ws = TRUE)
+
+'%!in%' <- Negate('%in%')
+no.subj.phenos <- which(only_whole_blood4$submitted_subject_id %!in% phenotype$SUBJID)
+no.subj.phenos <- only_whole_blood4[no.subj.phenos,]
+no.subj.phenos$submitted_subject_id # you must have downloaded the wrong thing.
+
+```
+
+
+### WHY ARE THERE SO MANY PEOPLE MISSING PHENOTYPES?  check against the PC file.  BC they were removed from final subject freeze for some reason.
+```{r}
+genopcs.path <- '/Volumes/JHPCE/dcs01/resources/GTeX/dbGaP_GTeX_phs000424.v7.p2/files/phg000830.v1.GTEx_WGS.genotype-calls-vcf.c1/genotypes.GTEx_v7_all_biallelic_SNPs/plink.bfileset/GTEx.v7.biallelic_SNPs_only.rsIDs.noDup.filtered.maf0.01.geno0.mind0.05.hwe10e-4.filtered.ld_prune.all_samples.eigenvec'
+genopcs <- fread(genopcs.path)
+genopcs$V2 <- NULL
+
+seqs <- seq(1:20)
+pcs <- paste0('Genotyping.PC', seqs)
+colnames(genopcs) <- c('submitted_subject_id', pcs)
+nrow(genopcs)
+no.genopcs <- only_whole_blood4[which(only_whole_blood4$submitted_subject_id %!in% genopcs$submitted_subject_id),]
+# the same ones are missing. maybe you downloaded the wrong files.  
+
+# find the opposite things --> 
+genopcs$submitted_subject_id[which(genopcs$submitted_subject_id %!in% only_whole_blood4$submitted_subject_id)]
+missed.people <- genopcs$submitted_subject_id[which(genopcs$submitted_subject_id %!in% only_whole_blood4$submitted_subject_id)]
+# ^ these are the true missing people you need to find. 
+who.missing <- merge(genopcs, sra_run_table, by = 'submitted_subject_id')
+only.wgs <- subset(who.missing, Assay_Type == 'WGS')
+nrow(only.wgs) # this is not the right number! 2 people are missing!!
+
+which(only.wgs$submitted_subject_id %in% missed.people)
+
+which(only.wgs$submitted_subject_id %in% missed.people) %>% length
+
+needed <- only.wgs[which(only.wgs$submitted_subject_id %in% missed.people),]
+
+unique(needed$Run) %>% length # all unique runs
+unique(needed$submitted_subject_id) %>% length # all unique people
+
+# you are missing the following SRRs:
+write.table(needed$Run, file = 'data_files/missing.bamfiles.txt', row.names = F, col.names = T, quote = F)
+```
+
+```{r}
+with.adjust.pheno <- merge(only_whole_blood4, phenotype, by.x = 'submitted_subject_id', by.y = 'SUBJID')
+indiv_count <- rbind(indiv_count, c((nrow(only_whole_blood4) - nrow(with.adjust.pheno)), 'Not in phenotype file'))
+
+# SAMPLE
+dat <- read.table("/Volumes/JHPCE/dcs01/resources/GTeX/dbGaP_GTeX_phs000424.v7.p2/GTEx_v7_Annotations_SampleAttributesDS.txt",
+                      header=TRUE,stringsAsFactors=FALSE,sep="\t",fill=TRUE,
+                      quote="")
+dat.wgs <- subset(dat, SMAFRZE == 'WGS')
+dat.wgs <- subset(dat.wgs, SMTSD == 'Whole Blood')
+splitted <- strsplit(dat.wgs$SAMPID, split = '\\-')
+all.names <- sapply(splitted, "[[", 2)
+dat.wgs$SUBJID <- paste0('GTEX-', all.names)
+colnames(dat.wgs) <- paste0('wgs.', colnames(dat.wgs))
+
+with.adjust.pheno <- merge(with.adjust.pheno, dat.wgs, by.y = 'wgs.SUBJID', by.x = 'submitted_subject_id')
+
+save(with.adjust.pheno, file = 'with.adjust.pheno.rds')
+# save.image('tpms/RDatas/make_mt_file.RData')
+```
+
+# geno PCs: assign race
+```{r}
+genopcs.path <- '/Volumes/JHPCE/dcs01/resources/GTeX/dbGaP_GTeX_phs000424.v7.p2/files/phg000830.v1.GTEx_WGS.genotype-calls-vcf.c1/genotypes.GTEx_v7_all_biallelic_SNPs/plink.bfileset/GTEx.v7.biallelic_SNPs_only.rsIDs.noDup.filtered.maf0.01.geno0.mind0.05.hwe10e-4.filtered.ld_prune.all_samples.eigenvec'
+genopcs <- fread(genopcs.path)
+genopcs$V2 <- NULL
+
+seqs <- seq(1:20)
+pcs <- paste0('Genotyping.PC', seqs)
+colnames(genopcs) <- c('submitted_subject_id', pcs)
+
+plot(genopcs$Genotyping.PC3, genopcs$Genotyping.PC4)
+
+add.genopcs <- merge(with.adjust.pheno, genopcs, by = 'submitted_subject_id')
+# nobody was lost here, thankfully
+
+with.adjust.pheno <- add.genopcs
+
+with.adjust.pheno$race <- 0
+with.adjust.pheno$race[which(with.adjust.pheno$RACE==1)] <- 'Asian'
+with.adjust.pheno$race[which(with.adjust.pheno$RACE==2)] <- 'Black'
+with.adjust.pheno$race[which(with.adjust.pheno$RACE==3)] <- 'White'
+with.adjust.pheno$race[which(with.adjust.pheno$RACE==4)] <- 'American Indian/Alaskan'
+with.adjust.pheno$race[which(with.adjust.pheno$RACE==99)] <- 'Unknown'
+
+with.adjust.pheno$Race <- with.adjust.pheno$race
+ggplot(with.adjust.pheno, aes(Genotyping.PC1, Genotyping.PC2, col = Race)) + geom_point() + xlab('Genotyping PC1') + ylab('Genotyping PC2') 
+
+library(viridis)
+ggplot(with.adjust.pheno, aes(Genotyping.PC1, Genotyping.PC2, col = mito_percents)) + geom_point() + scale_colour_viridis() #scale_colour_gradient(low = "red",high = "white")
+
+ggplot(with.adjust.pheno, aes(Genotyping.PC1, Genotyping.PC2, col = mito_percents)) + geom_point() + scale_colour_gradientn(colours = rainbow(12))
+
+ggplot(with.adjust.pheno, aes(Genotyping.PC1, Genotyping.PC2, col = mito_percents)) + geom_point() + scale_colour_gradientn(colours = terrain.colors(12))
+
+ # exclude the one person who is not assigned well 
+# does mtdna-cn look different for the outliers in pcs?
+# worry about genotype
+
+ggplot(with.adjust.pheno, aes(race, mito_percents)) + geom_boxplot() + stat_summary(fun.data = give.n, geom = "text")
+```
+
+### NEW SECTION ###
+# subset by PCs
+```{r}
+with.adjust.pheno.save <- with.adjust.pheno
+ggplot(with.adjust.pheno.save, aes(Genotyping.PC1, Genotyping.PC2, col = race)) + geom_point()
+
+ggplot(with.adjust.pheno, aes(Genotyping.PC1, Genotyping.PC2)) + geom_point()
+# you're going to draw a box --> PC1 < 0, PC < 0.05 = europeans
+# box: PC1 > 0.05, PC2 < 0.05 = AA
+
+gg_color_hue <- function(n) {
+  hues = seq(15, 375, length = n + 1)
+  hcl(h = hues, l = 65, c = 100)[1:n]
+}
+
+n = 5
+cols = gg_color_hue(n)
+
+only.eur <- which(with.adjust.pheno$Genotyping.PC1 < 0 & with.adjust.pheno$Genotyping.PC2 < 0.05)
+only.aa <- which(with.adjust.pheno$Genotyping.PC1 > 0.05 & with.adjust.pheno$Genotyping.PC2 < 0.4)
+
+with.adjust.pheno$Geno.keep <- 'No'
+with.adjust.pheno$Geno.keep[only.eur] <- 'Yes' 
+with.adjust.pheno$Geno.keep[only.aa] <- 'No'
+indiv_count <- rbind(indiv_count, c(nrow(subset(with.adjust.pheno, Geno.keep != 'Yes')), 'Genotyping PCs'))
+with.adjust.pheno.nosubset <- with.adjust.pheno
+with.adjust.pheno <- subset(with.adjust.pheno, Geno.keep == 'Yes')
+```
+
+## don't subset by PCs
+## new file
+```{r}
+with.adjust.pheno.nosubset$wgs.SMNABTCHD.date <- as.POSIXct(strptime(with.adjust.pheno.nosubset$wgs.SMNABTCHD,format="%m/%d/%Y"))
+with.adjust.pheno.nosubset$`Date Bin` <- '04-2012 - 01-2013'
+with.adjust.pheno.nosubset$`Date Bin`[which(with.adjust.pheno.nosubset$wgs.SMNABTCHD.date > '2013-01-01 EST')] <- 'After 01-2013'
+with.adjust.pheno.nosubset$`Date Bin`[which(with.adjust.pheno.nosubset$wgs.SMNABTCHD.date < '2012-04-01 EST')] <- 'Before 04-2012'
+no_surgery.allrace <- subset(with.adjust.pheno.nosubset, `Date Bin` == 'After 01-2013') # keep in mind, not all these folks have corresponding rnaseq data
+all.races.after.2013 <- no_surgery.allrace
+
+save(all.races.after.2013, file = 'data_files/all.races.rds')
+
+### GOTO: modeling.mt.frames.allraces.Rmd
+
+```
+
+
+# save image
+```{r}
+# save.image('tpms/RDatas/make_mt_file.RData')
+# load('tpms/RDatas/make_mt_file.RData')
+```
+
+### END NEW ###
+
+# fix the date
+```{r}
+with.adjust.pheno$wgs.SMNABTCHD.date <- as.POSIXct(strptime(with.adjust.pheno$wgs.SMNABTCHD,format="%m/%d/%Y"))
+```
+
+# look at cohort by date
+```{r}
+ggplot(with.adjust.pheno, aes(wgs.SMNABTCHD.date, COHORT)) + geom_point()
+
+ggplot(with.adjust.pheno, aes(wgs.SMNABTCHD.date, wgs.SMTSISCH, col = COHORT)) + geom_point() + xlab('Date of WGS nucleic acid isolation') + ylab('Subject-level Ischemic time')
+
+ggplot(with.adjust.pheno, aes(wgs.SMNABTCHD.date, TRISCHD, col = COHORT)) + geom_point()
+lm(TRISCHD ~ `Date Bin`, data = with.adjust.pheno) %>% summary
+
+# is ischemic time post-2013 significantly different from pre-2012?
+with.adjust.pheno$`Date Bin` <- 'Before 01-2013'
+with.adjust.pheno$`Date Bin`[which(with.adjust.pheno$wgs.SMNABTCHD.date > '2013-01-01 EST')] <- 'After 01-2013'
+lm(TRISCHD ~ `Date Bin`, data = with.adjust.pheno) %>% summary
+
+# only postmortem people
+only.post <- subset(with.adjust.pheno, COHORT == 'Postmortem')
+ggplot(only.post, aes(wgs.SMNABTCHD.date, TRISCHD, col = COHORT)) + geom_point()
+lm(TRISCHD ~ `Date Bin`, data = only.post) %>% summary
+
+
+```
+
+# cut by date
+```{r}
+with.adjust.pheno$`Date Bin` <- '04-2012 - 01-2013'
+with.adjust.pheno$`Date Bin`[which(with.adjust.pheno$wgs.SMNABTCHD.date > '2013-01-01 EST')] <- 'After 01-2013'
+with.adjust.pheno$`Date Bin`[which(with.adjust.pheno$wgs.SMNABTCHD.date < '2012-04-01 EST')] <- 'Before 04-2012'
+```
+
+# visualize mito percent by date. 
+```{r}
+# colorblind-friendly palette from here: https://www.datanovia.com/en/blog/ggplot-colors-best-tricks-you-will-love/#use-a-colorblind-friendly-palette
+cbp1 <- c("#999999", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+ggplot(with.adjust.pheno, aes(wgs.SMNABTCHD.date, mito_percents, col = `Date Bin`)) + geom_point() + xlab('Date of nucleic acid extraction') + ylab('Unadjusted mtDNA-CN') + theme_classic()+ scale_colour_manual(values=cbp1)
+
+
+ggplot(with.adjust.pheno, aes(wgs.SMNABTCHD.date, mito_percents, col = `Date Bin`)) + geom_point() + xlab('Date of nucleic acid extraction') + ylab('Unadjusted mtDNA-CN') + theme_bw()+ scale_colour_manual(values=cbp1)
+
+
+
+ggplot(with.adjust.pheno, aes(wgs.SMNABTCHD.date, mito_percents, col = `Date Bin`)) + geom_point() + xlab('Date of nucleic acid extraction') + ylab('Unadjusted mtDNA-CN') + theme_minimal() + scale_colour_manual(values=cbp1)
+
+library(viridis)
+ggplot(with.adjust.pheno, aes(wgs.SMNABTCHD.date, mito_percents, col = `Date Bin`)) + geom_point() + xlab('Date of nucleic acid extraction') + ylab('Unadjusted mtDNA-CN') + theme_minimal() + scale_color_viridis(discrete = T)
+
+
+
+ggplot(with.adjust.pheno, aes(wgs.SMNABTCHD.date, mito_reads, col = `Date Bin`)) + geom_point() + xlab('Date of nucleic acid extraction') + ylab('Mitochondrial reads')
+
+with.adjust.pheno$`Nucleic Acid Batch Type` <- with.adjust.pheno$wgs.SMNABTCHT
+ggplot(with.adjust.pheno, aes(wgs.SMNABTCHD.date, mito_percents, col = `Nucleic Acid Batch Type`)) + geom_point() + xlab('Date of nucleic acid extraction') + ylab('Uncorrected mtDNA-CN')
+```
+
+# SUBSET based on cut date!
+```{r}
+no_surgery <- subset(with.adjust.pheno, `Date Bin` == 'After 01-2013') # keep in mind, not all these folks have corresponding rnaseq data
+
+no_surgery.prior <- subset(with.adjust.pheno, `Date Bin` == 'Before 04-2012') 
+# how many of these have rnaseq data? 71.
+# library(data.table)
+# 
+# phenotypes <- fread('~/jhpce/dcs01/arking/arkinglab/resources/GTeX/dbGaP_GTeX_phs000424.v7.p2/files/phs000424.v7.pht002743.v7.p2.sample_info_phenotypes/phs000424.v7.pht002743.v7.p2.c1.GTEx_Sample_Attributes.GRU.txt')
+# colnames(phenotypes) <- tolower(colnames(phenotypes))
+# 
+# blood.runs <- subset(phenotypes, smtsd == 'Whole Blood' & analyte_type == 'RNA:Total RNA' & smafrze == 'RNASEQ')
+# 
+# subjids <- substr(blood.runs$sampid, 6, 10)
+# subjids <- gsub('-', '', subjids)
+# blood.runs$submitted_subject_id <- paste0('GTEX-', subjids)
+# 
+# length(which(no_surgery.prior$submitted_subject_id %in% blood.runs$submitted_subject_id))
+
+# # only five surgical subjects
+# # no_surgery <- subset(with.adjust.pheno, COHORT != 'Surgical')
+# # keep the surgery folks
+# 
+# # only five '99' race subjects
+# # take out race '1' subjects
+# 
+# # no_surgery <- subset(no_surgery, RACE != 99) # 5 people (unannotated)
+# no_surgery <- subset(no_surgery, RACE != 1) # (asians)
+# 
+# ggplot(no_surgery, aes(as.factor(RACE), mito_percents))+ stat_summary(fun.data = give.n, geom = "text") + geom_boxplot()
+# 
+# no_surgery$COHORT <- as.factor(no_surgery$COHORT)
+# no_surgery$RACE <- as.factor(no_surgery$RACE)
+# no_surgery_save <- no_surgery
+```
+
+<!-- # only look at releaseDate -->
+<!-- ```{r} -->
+<!-- density_rug(no_surgery, 'mito_percents', binsize = 0.001) -->
+
+<!-- ggplot(no_surgery, aes(ReleaseDate, mito_percents)) + geom_boxplot() + stat_summary(fun.data = give.n, geom = "text") -->
+<!-- only.2015 <- subset(no_surgery, ReleaseDate == '2015-10-06') -->
+
+<!-- ggplot(only.2015, aes(LoadDate, mito_percents)) + geom_boxplot() + stat_summary(fun.data = give.n, geom = "text") + geom_point() -->
+
+<!-- ggplot(only.2015, aes(instrument_name, mito_percents)) + geom_boxplot() + stat_summary(fun.data = give.n, geom = "text") + geom_point() -->
+
+<!-- ggplot(with.adjust.pheno, aes(instrument_name, mito_percents)) + geom_boxplot() + stat_summary(fun.data = give.n, geom = "text") + geom_point(aes(col = ReleaseDate)) -->
+
+<!-- ggplot(with.adjust.pheno, aes(instrument_name, mito_percents)) + geom_boxplot() + stat_summary(fun.data = give.n, geom = "text") + geom_point(aes(col = Instrument)) -->
+<!-- # masssssive confusion. -->
+
+<!-- # from the gtex website:  -->
+<!-- # Of these, 68 samples were sequenced on Illumina HiSeq 2000 using 101-bp paired-end reads, and 584 samples on Illumina HiSeq X using 151-bp paired-end reads. -->
+<!-- table(with.adjust.pheno$Instrument) -->
+<!-- # doesn't match up!! -->
+
+<!-- check <- as.data.frame(table(with.adjust.pheno$instrument_name)) -->
+<!-- check$type <- substr(check$Var1, 5, 5) -->
+<!-- tapply(check$Freq, check$type, sum) -->
+<!-- # this is more accurate -->
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- # oh dear lord the instrument assignments are off!!! -->
+<!-- # reassign instrument  -->
+<!-- with.adjust.pheno$reassign_inst <- substr(with.adjust.pheno$instrument_name, 4, 5) -->
+<!-- with.adjust.pheno$reassign_instrument <- 'Unknown' -->
+<!-- with.adjust.pheno$reassign_instrument[which(with.adjust.pheno$reassign_inst == 'HE')] <- 'HiSeq 2000' -->
+<!-- with.adjust.pheno$reassign_instrument[which(with.adjust.pheno$reassign_inst == 'HX')] <- 'HiSeq X' -->
+<!-- table(with.adjust.pheno$reassign_instrument) -->
+
+<!-- ggplot(with.adjust.pheno, aes(mito_percents, col = reassign_instrument)) + geom_density() -->
+<!-- no_surgery <- with.adjust.pheno -->
+<!-- ``` -->
+
+# MODELING FOR LATER
+# SAVE AND MOVE ON.
+```{r}
+mito.after.1.2013 <- no_surgery
+save(mito.after.1.2013, file = 'data_files/MT_stats/mtoolbox.mito.after.1.2013.rds')
+
+mito.before.4.2012 <- no_surgery.prior
+save(mito.before.4.2012, file = 'data_files/MT_stats/mtoolbox.mito.before.4.2012.rds')
+```
+
+# GOTO: MTOOL.modeling.mt.frames.Rmd
+
+
+
+

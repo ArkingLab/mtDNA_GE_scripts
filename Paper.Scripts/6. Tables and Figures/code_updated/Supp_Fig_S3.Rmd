@@ -1,0 +1,52 @@
+# 6.15.2020
+
+# This script will show blood SVs and cohort
+```{r setup}
+library(data.table)
+library(knitr)
+wdir <- paste0('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/')
+setwd(wdir)
+opts_knit$set(root.dir = wdir)
+```
+
+```{r}
+load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/Whole Blood/full.frame.rds')
+library(ggplot2)
+
+cbp1 <- c("#999999", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+cbp1[iris$Species]
+cbp1[as.factor(full.frame.ct.corr$COHORT)]
+
+pairs(iris, col = cbp1[iris$Species])
+
+library(yangR)
+full.frame.ct.corr$COHORT
+
+pairs(~SV1 + SV2, data = full.frame.ct.corr, col = cbp1[as.factor(full.frame.ct.corr$COHORT)])
+pairs(~SV1 + SV2, data = full.frame.ct.corr, col = cbp1[as.factor(full.frame.ct.corr$COHORT)], label.pos=0.5, main="Correlation matrix of SVs", labels = c('SV1', 'SV2'))
+
+pairs(~SV1 + SV2 + SV3 + SV4 + SV5 + SV6 + SV7 + SV8 + SV9 + SV10, data = full.frame.ct.corr, main="Correlation matrix of SVs, colored by cohort", labels = c('SV1', 'SV2', 'SV3', 'SV4', 'SV5', 'SV6', 'SV7', 'SV8', 'SV9', 'SV10'), col = cbp1[as.factor(full.frame.ct.corr$COHORT)], pch = 19)
+par(xpd = TRUE)
+legend("right", fill = cbp1[1:2], legend = c(levels(as.factor(full.frame.ct.corr$COHORT))))
+
+pairs(iris[, 1:4], col = iris$Species, oma=c(3,3,3,15))
+par(xpd = TRUE)
+legend("bottomright", fill = unique(iris$Species), legend = c( levels(iris$Species)))
+
+sv.cohort = dplyr::select(full.frame.ct.corr, SV1, SV2, SV3, SV4, SV5, SV6, SV7, SV8, SV9, SV10, COHORT)
+
+library(GGally)
+
+ggpairs(sv.cohort, columns = 1:11, axisLabels = 'none') 
+
+# 
+# ggpairs(sv.cohort, columns = 1:10, axisLabels = 'none') + scale_colour_manual(aes(col = COHORT), values=cbp1) + scale_fill_manual(aes(col = COHORT), values=cbp1)+ theme(legend.position = "bottom") + labs(col = 'Cohort') 
+
+ggpairs(sv.cohort, columns = 1:10, axisLabels = 'none', aes(col = COHORT), legend = 1, upper = "blank") + scale_colour_manual(values=cbp1) + scale_fill_manual(values=cbp1)+ theme(legend.position = "bottom") + labs(col = 'Cohort') 
+
+ggpairs(sv.cohort, columns = 1:10, axisLabels = 'none', aes(col = COHORT), legend = 1, type = lower) + scale_colour_manual(values=cbp1) + scale_fill_manual(values=cbp1)+ theme(legend.position = "bottom") + labs(col = 'Cohort') 
+
+ggplot(full.frame.ct.corr, aes(SV1, SV2, col = COHORT)) + geom_point() + scale_colour_manual(values=cbp1) + labs(col = 'Cohort') + theme_classic()
+
+```
