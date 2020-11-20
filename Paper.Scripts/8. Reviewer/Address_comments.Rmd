@@ -1,0 +1,139 @@
+# This script will generate figures and tables to address reviewer comments (that aren't addressed in edited versions of previous scripts)
+
+```{r}
+library(ggplot2)
+library(yangR)
+library(analyzeR)
+load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_objects/final.mito.rds')
+```
+# density plot of transformed and untransformed mtDNA-CN
+```{r}
+final.mito$mtDNA_adjust_AGE <- resid(lm(mtDNA ~ Neutrophils + HSC + Megakaryocytes + COHORT + TRISCHD + AGE + SEX, data = final.mito))
+unt = ggplot(final.mito, aes(mtDNA_adjust_AGE)) + geom_density() + geom_rug() + theme_classic() + xlab('Residual for mtDNA-CN')
+
+t = ggplot(final.mito, aes(inv.norm.transform(mtDNA_adjust_AGE))) + geom_density() + geom_rug() + theme_classic() + xlab('Inverse normal transformed residual for mtDNA-CN')
+
+library(patchwork)
+unt + t
+```
+
+
+# How many genes passed permutation cutoff that were positive?
+```{r}
+load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/Whole Blood/with.gene.rds')
+sig = subset(with.gene, pval < 2.7e-6)
+sig$dir = ifelse(sig$beta > 0, 'Pos', 'Neg')
+table(sig$dir)
+```
+
+
+# Check 1000
+```{r}
+setwd('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/new.permutation.method/Whole Blood/')
+pval = list.files()
+pval = pval[-grep('perm.beta', pval)]
+pval = pval[1:1000]
+```
+
+# read in
+```{r}
+min_pvals = numeric()
+for(i in 1:1000){
+  df = as.data.frame(fread(pval[i]))
+  min_pvals = c(min_pvals, min(df$x))
+}
+
+min_pvals = min_pvals[order(min_pvals)]
+min_pvals[1000*0.05]
+```
+
+# plot age in UKB
+```{r}
+library(EnvStats)
+clean.data$resid.mtDNA_AGE = scale(resid(lm(resid.mtDNA ~ age, data = clean.data, na.action = na.exclude)))
+clean.data$resid.mtDNA_SEX = scale(resid(lm(resid.mtDNA ~ sex, data = clean.data, na.action = na.exclude)))
+
+# clean.data = clean.data[-which(is.na(clean.data$age)),]
+clean.data = clean.data %>% filter(age>=40)
+clean.data<-clean.data %>% mutate(agegroup=as.factor(cut(clean.data$age,seq(40,75,5),right=FALSE)))#,labels=c(1:7))))
+age.plot<-clean.data %>%
+  ggplot(aes(x=agegroup,y=resid.mtDNA)) +
+  geom_boxplot() +
+  stat_n_text() +
+  labs(title="mtDNA-CN by age group (All)") + theme_classic() + ylab('Unadjusted mtDNA-CN') + xlab('Age group')
+age.plot
+
+clean.data$sex = factor(clean.data$sex, levels = c('Male', 'Female'))
+sex.plot <- clean.data %>% ggplot(aes(x=as.factor(sex), y=resid.mtDNA)) + geom_boxplot() + labs(title="mtDNA-CN by sex") + theme_classic() + ylab('Unadjusted mtDNA-CN') + xlab('Biological sex')
+sex.plot
+
+library(patchwork)
+age.plot + sex.plot
+
+png(file = '/dcs01/arking/arkinglab/active/projects/GTeX/syang/ukb_ageplot.png')
+age.plot
+dev.off()
+
+ggplot(clean.data, aes(age, resid.mtDNA)) + geom_point() + theme_classic() + geom_smooth(method = 'lm')
+```
+
+
+
+
+# Show results with and without INT:
+```{r}
+load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/Whole Blood/with.gene.noINT.rds')
+no.int = with.gene
+load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/Whole Blood/with.gene.rds')
+int = with.gene
+load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/Whole Blood/with.gene.noSCALE.rds')
+noscale = with.gene
+
+both = merge(noscale, int, by = 'gene_id', suffixes = c('_scale', '_no_scale'))
+ggplot(both, aes(beta_scale, beta_no_scale)) + geom_point() + xlab('Effect estimate after scaling + inverse normal transformation') + ylab('Effect estimate after no scaling + inverse normal transformation') + theme_classic() 
+
+w.both = merge(int, no.int, by = 'symbol', suffixes = c('_int', 'no_int'))
+
+# get the top 10 results for INT and show what they look like without INT
+to.get = head(int, 10)$symbol
+
+top = subset(w.both, symbol %in% to.get)
+
+top2 = dplyr::select(top, symbol, beta_int, SE_int, pval_int, betano_int, SEno_int, pvalno_int)
+
+library(htmlTable)
+
+top2 = top2[order(top$pval_int, decreasing = F),]
+
+top2$beta_int = formatbeta(top2$beta_int)
+top2$SE_int = formatbeta(top2$SE_int)
+top2$betano_int = formatbeta(top2$betano_int)
+top2$SEno_int = formatbeta(top2$SEno_int)
+top2$pvalno_int = formatpval(top2$pvalno_int)
+top2$pval_int = formatpval(top2$pval_int)
+
+htmlTable(top2[,-1], rnames = top2$symbol, cgroup = c('Inverse normal transformation', 'No inverse normal transformation'), n.cgroup = c(3,3), header = c('Effect estimate', 'Standard error', 'P-value', 'Effect estimate', 'Standard error', 'P-value'))
+```
+
+# and for gene enrichment:
+```{r}
+load('/Volumes/JHPCE 1/dcs01/active/projects/GTeX/syang/look.version8/Whole Blood/all.kegg.rds')
+int = all.kegg.sets
+load('/Volumes/JHPCE 1/dcs01/active/projects/GTeX/syang/look.version8/Whole Blood/all.kegg.noINT.rds')
+noint = all.kegg.sets
+
+top10 = subset(int, Beta > 0)[1:10,]
+both = merge(top10, noint, by = "Gene.Set.Name", suffixes = c('_int', '_noint'))
+
+both = both[order(both$T.test.pval_int, decreasing = F),]
+show = dplyr::select(both, Gene.Set.Name, Beta_int, T.test.pval_int, Beta_noint, T.test.pval_noint, Num.genes.in.set_int)
+
+show$Beta_int = formatbeta(as.numeric(show$Beta_int))
+show$Beta_noint = formatbeta(as.numeric(show$Beta_noint))
+show$T.test.pval_noint = formatpval(as.numeric(show$T.test.pval_noint))
+show$T.test.pval_int = formatpval(as.numeric(show$T.test.pval_int))
+show$Gene.Set.Name = gsub('KEGG_', '', show$Gene.Set.Name)
+
+htmlTable(show[,-1], rnames = show$Gene.Set.Name, cgroup = c('Inverse normal transformation', 'No inverse normal transformation', ''), n.cgroup = c(2,2), header = c('Effect estimate', 'P-value', 'Effect estimate', 'P-value', 'Number of genes in set'))
+```
+
