@@ -5,6 +5,8 @@
 ```{r setup}
 library(data.table)
 library(knitr)
+library(ggplot2)
+library(magrittr)
 wdir <- paste0('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/')
 setwd(wdir)
 opts_knit$set(root.dir = wdir)
@@ -39,7 +41,7 @@ opts_knit$set(root.dir = wdir)
 # 
 # save(big.sig.pathways, file = '/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_code/Cross.tissue.look/big.sig.pathways.nopseudo.permutecut.rds')
 
-load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_code/Cross.tissue.look/big.sig.pathways.nopseudo.permutecut.rds')
+load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_code/Cross.tissue.look/big.sig.pathways.permutecut_1000.rds')
 ```
 
 # limit to only tissues with significant GIF
@@ -52,7 +54,7 @@ lambda.cutoff <- all.lambdas$Lambda[nrow(all.lambdas) * 0.05]
 sig.tissues <- subset(lambda.frame, Lambda > lambda.cutoff)
 
 only.sig.tissues <- subset(big.sig.pathways, Tissue %in% sig.tissues$Tissue)
-save(only.sig.tissues, file = '/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_code/Cross.tissue.look/only.sig.tissues.rds')
+save(only.sig.tissues, file = '/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_code/Cross.tissue.look/only.sig.tissues_1000.rds')
 ```
 
 # pathways significant in multiple tissues

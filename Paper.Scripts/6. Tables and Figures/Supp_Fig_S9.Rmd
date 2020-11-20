@@ -1,0 +1,100 @@
+# 5.15.2020
+# This script will look at drivers for KEGG pathways
+# Also ELK1/other stuff
+# Adapted from Meta.Forestplots.Rmd
+
+# 3.6.2020
+
+# This script will show random beta meta-analysis results. Adapted from Cross.tissue.look/forestplots.R
+```{r setup}
+library(data.table)
+library(knitr)
+library(meta)
+wdir <- paste0('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/')
+setwd(wdir)
+opts_knit$set(root.dir = wdir)
+```
+
+# get Ns for each!
+```{r}
+load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_objects/elk1.only.rds') # it might be too big??
+# load('R_objects/all.lambdas.rds')
+# load('R_objects/lambda.frame.rds') 
+
+# 
+# load('/dcs01/arking/arkinglab/active/projects/GTeX/syang/look.version8/R_objects/big.with.gene.w.samps.rds')
+# load('/dcs01/arking/arkinglab/active/projects/GTeX/syang/look.version8/R_objects/all.lambdas.rds')
+# load('/dcs01/arking/arkinglab/active/projects/GTeX/syang/look.version8/R_objects/lambda.frame.rds') 
+```
+
+```{r}
+library(qusage)
+tft.sets <- read.gmt('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/GO_enrich/MsigDB/c3.tft.v7.0.symbols.gmt')
+```
+
+
+# forestplot function:
+```{r}
+combined = elk1
+gene = 'ELK1'
+title = ''
+
+# make.forestplot.noblood.meta <- function(gene, combined, title = ''){
+	# you will save the plot as gene_title
+	gene.title <- paste0(gene, title)
+
+	# required packages:
+	require(forestplot)
+	require(meta)
+
+	# get effects for specific gene:	
+	gene.only <- subset(combined, symbol == gene) # 49 tissues --> but might not be same for every tissue!
+	gene.only <- gene.only[order(gene.only$t_value, decreasing = T),]
+
+	# get means and upper/lower limits
+	means <- gene.only$beta
+	upper <- gene.only$beta+(1.96*gene.only$SE)
+	lower <- gene.only$beta-(1.96*gene.only$SE)
+
+	# random effects meta-analysis, inverse variance weighted
+	# exclude blood from the meta-analysis
+	no.blood <- subset(gene.only, Tissue != 'Whole Blood')
+	
+	m1 <- metamean(no.blood$N, no.blood$beta, no.blood$SE, comb.random = T)
+	
+	tval <- m1$TE.random/m1$seTE.random
+  meta.pval <- 2*pt(abs(tval), m1$df.Q, lower=FALSE) 
+    
+	# add meta to vectors
+	means <- c(NA, NA, NA, means, NA, m1$TE.random)
+	upper <- c(NA, NA, NA, upper, NA, m1$TE.random + (1.96*m1$seTE.random))
+	lower <- c(NA, NA, NA, lower, NA, m1$TE.random - (1.96*m1$seTE.random))
+
+gene.only$pval2 <- ifelse(gene.only$pval > 0.001, format(round(gene.only$pval, 3), nsmall = 3), formatC(gene.only$pval, format = "e", digits = 2))
+gene.only$pval2 <- ifelse(gene.only$pval > 0.05, format(round(gene.only$pval, 2), nsmall = 2), gene.only$pval2)
+
+
+	# create table text
+xticks = seq(from = -0.05, to = 0.3, by = 0.05)
+	text <-cbind(c(paste0("Forestplot for ", gene), NA, "Tissue", gene.only$Tissue, NA, 'Summary (Random)'), 
+		c(NA, NA, 'N', gene.only$N, NA, NA), 
+		c(NA, NA,"Effect estimate", formatC(round(gene.only$beta, 2), 2, format = "f"), NA, formatC(round(m1$TE.random, 2), 2, format = "f")), 	c(NA, NA,"Standard error", formatC(round(gene.only$SE, 2), 2, format = "f"), NA, formatC(round(m1$seTE.random, 2), 2, format = "f")), c(NA, NA,"P-value", gene.only$pval2, NA, formatC(round(meta.pval, 3), 3, format = "f")))
+
+	
+
+	# draw forestplot
+pdf(paste0('~/Desktop/ELK1.pdf'), width = 13.3, height = 7.5, onefile = F)
+	forestplot(text, means, lower, upper, col=fpColors(box="royalblue",line="darkblue", summary="royalblue"), is.summary=c(TRUE, FALSE, TRUE, rep(FALSE, nrow(gene.only)+1), TRUE), xticks=xticks, txt_gp = fpTxtGp(ticks=gpar(cex=0.9)))
+	dev.off()
+#	dev.off()
+# }
+```
+
+# ELK1 forestplot
+```{r}
+load('R_objects/elk1.rds')  # 18 tissues where ELK1 was significantly enriched
+elk.tiss <- subset(only.sig, tissue %in% elk1$tissue)
+
+make.forestplot.noblood.meta('ELK1', elk.tiss)
+```
+

@@ -1,0 +1,124 @@
+# 6.1.2020
+# 5.15.2020
+
+# This script will show ALL spearman correlations
+```{r setup}
+library(data.table)
+library(knitr)
+wdir <- paste0('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/')
+setwd(wdir)
+opts_knit$set(root.dir = wdir)
+```
+
+# load stuff
+```{r}
+load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_objects/perm.beta.results.rds')
+load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_objects/spear.results.rds')
+spear.results$Spear.Correlation = as.numeric(spear.results$Correlation)
+perm.beta.results$Spear.Correlation = as.numeric(perm.beta.results$Spear.Correlation)
+```
+
+# modify perm.beta.results to get "average" spear and 95% CI for each tissue:
+```{r}
+perm.beta.results = na.omit(perm.beta.results)
+perm.beta.results$Spear.Correlation = as.numeric(perm.beta.results$Spear.Correlation)
+class(perm.beta.results$Spear.Correlation)
+
+avg.spear = tapply(perm.beta.results$Spear.Correlation, perm.beta.results$Tissue, mean)
+df = data.frame(keyName=names(avg.spear), mean=avg.spear, row.names=NULL)
+
+sd.spear = tapply(perm.beta.results$Spear.Correlation, perm.beta.results$Tissue, sd)
+df2 = data.frame(keyName=names(sd.spear), sd=sd.spear, row.names=NULL)
+
+permutes = dplyr::inner_join(df, df2, by = 'keyName')
+permutes$upperCI = permutes$mean + 1.96*permutes$sd
+permutes$lowerCI = permutes$mean - 1.96*permutes$sd
+```
+
+# show all results w/ permute CIs:
+```{r}
+w.perm = merge(spear.results, permutes, by.x = 'Tissue', by.y = 'keyName')
+
+# figure out which are significant:
+which(w.perm$Spear.Correlation < w.perm$lowerCI | w.perm$Spear.Correlation > w.perm$upperCI) %>% length
+
+sig = w.perm[which(w.perm$Spear.Correlation < w.perm$lowerCI | w.perm$Spear.Correlation > w.perm$upperCI),]
+
+dplyr::select(sig, Tissue, Spear.Correlation, lowerCI, upperCI)
+
+w.perm$Sig = ifelse(w.perm$Spear.Correlation < w.perm$lowerCI | w.perm$Spear.Correlation > w.perm$upperCI, 1, 0)
+
+for(i in 1: nrow(w.perm)){
+  if(w.perm$Sig[i] == 1){
+    print(w.perm$Tissue[i])
+    w.perm$lowerCI[i] = format(round(as.numeric(w.perm$lowerCI[i]), 3), nsmall = 3)
+    w.perm$upperCI[i] = format(round(as.numeric(w.perm$upperCI)[i], 3), nsmall = 3)
+    w.perm$CI[i] = paste0(w.perm$lowerCI[i], ';', w.perm$upperCI[i])
+
+    w.perm$Spear.Correlation[i] = format(round(as.numeric(w.perm$Spear.Correlation[i]), 3), nsmall = 3)
+    w.perm$mean[i] = format(round(as.numeric(w.perm$mean[i]), 3), nsmall = 3)
+
+    # bold significant entries
+    w.perm[i,] = paste0('<b>', w.perm[i,], '</b>')
+
+  } else{
+    w.perm$lowerCI[i] = format(round(as.numeric(w.perm$lowerCI[i]), 3), nsmall = 3)
+    w.perm$upperCI[i] = format(round(as.numeric(w.perm$upperCI)[i], 3), nsmall = 3)
+    w.perm$CI[i] = paste0(w.perm$lowerCI[i], ';', w.perm$upperCI[i])
+    w.perm$Spear.Correlation[i] = format(round(as.numeric(w.perm$Spear.Correlation[i]), 3), nsmall = 3)
+    w.perm$mean[i] = format(round(as.numeric(w.perm$mean[i]), 3), nsmall = 3)
+  }
+}
+
+# w.perm$Tissue.try = paste0('<b>', w.perm$Tissue, '</b>')
+# w.perm$Tissue.name = ifelse(w.perm$Tissue %in% sig$Tissue, paste0
+```
+
+# htmlTable
+```{r}
+# w.perm$lowerCI = format(round(as.numeric(w.perm$lowerCI), 3))
+# w.perm$upperCI = format(round(as.numeric(w.perm$upperCI), 3))
+# w.perm$Spear.Correlation = format(round(as.numeric(w.perm$Spear.Correlation), 3))
+# w.perm$mean = format(round(as.numeric(w.perm$mean), 3))
+# w.perm$CI = paste0(w.perm$lowerCI, ';', w.perm$upperCI)
+
+show = dplyr::select(w.perm, Tissue, Spear.Correlation, mean, CI)
+
+library(htmlTable)
+
+htmlTable(show,
+          header =  c('Tissue', '&nbsp;&nbsp;Spearman correlation for significant blood genes&nbsp;&nbsp;', '&nbsp;&nbsp;Average spearman correlation for 100 permuted random gene sets&nbsp;&nbsp;', '95% Confidence Interval'),
+          rnames = rep('', nrow(show)))
+
+# Check if these are all significant lambdas!?
+load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_objects/lambda.frame.rds')
+load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_objects/all.lambdas.rds')
+
+lambda.cutoff <- all.lambdas$Lambda[nrow(all.lambdas) * 0.05] 
+sig.tissues <- subset(lambda.frame, Lambda > lambda.cutoff)
+
+sig$Tissue[which(sig$Tissue %in% sig.tissues$Tissue)]
+which(sig$Tissue %in% sig.tissues$Tissue) %>% length
+
+```
+
+# Show
+```{r}
+# spear.results$Set = 'Observed'
+# perm.beta.results$Set = 'Permuted'
+# 
+# all.results = dplyr::bind_rows(spear.results, perm.beta.results)
+# 
+# ggplot(all.results, aes(Spear.Correlation, fill = Set)) + geom_rug() + geom_density()+ geom_text(data = spear.results, aes(Spear.Correlation, y = 2, label = Tissue, vjust = -0.5), angle = 90, col = 'black') + geom_vline(xintercept = spear.results$Spear.Correlation, lty = 2, colour = "gray50") 
+# 
+# 
+# library(htmlTable)
+# show = dplyr::select(w.perm, Tissue, Spear.Correlation, CI)
+# 
+# htmlTable(show,
+#           header =  c('Tissue', 'Spearman correlation', 'CI'),
+#           rnames = rep('', nrow(w.perm)))
+```
+
+
+

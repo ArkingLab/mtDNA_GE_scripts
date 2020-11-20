@@ -22,17 +22,7 @@ sig <- subset(lambda.frame, Lambda > all.lambdas$Lambda[nrow(all.lambdas)*0.05])
 nrow(sig)
 ```
 
-# table time
-```{r}
-library(htmlTable)
-lambda.frame = na.omit(lambda.frame)
-lambda.frame$Lambda <- formatC(lambda.frame$Lambda, digits = 3) 
 
-
-htmlTable(lambda.frame, header = c('Tissue', 'Lambda'), rnames = rep('', nrow(lambda.frame)))
-
-         
-```
 
 # Dan says: Maybe add some labels for the more extreme results? And maybe drop blood (and just note its value in the legend), since this results in too much clustering at the lower end? 
 

@@ -28,6 +28,7 @@ colnames(all.lambdas) <- c('Lambda', 'Tissue')
 
 for (i in 1:length(all_tissues)){
         char <- all_tissues[i]
+        print(paste0("On tissue ", char))
         wdir <- paste0('/dcs01/arking/arkinglab/active/projects/GTeX/syang/look.version8/new.permutation.method/', char)
         if(file.exists(paste0('/dcs01/arking/arkinglab/active/projects/GTeX/syang/look.version8/new.permutation.method/', char, '/perm.1'))==F)
         {
@@ -35,9 +36,9 @@ for (i in 1:length(all_tissues)){
                 setwd(wdir)
                 for(x in 1:1000){
                         filename <- paste0('perm.', x)
-      pvals <- as.data.frame(fread(filename))
-      pvals=pvals[,2]
-      print(paste0('On permutation ', x))
+					      pvals <- as.data.frame(fread(filename))
+					      pvals=pvals[,2]
+					      # print(paste0('On permutation ', x))
                         chisq <- qchisq(1-pvals,1)
                         lambda<-median(chisq,na.rm=TRUE) / 0.456
                         all.lambdas <- rbind(all.lambdas, c(lambda, char))
@@ -49,11 +50,12 @@ for (i in 1:length(all_tissues)){
 }
 
 
+# Kidney should NOT be in here!!! You ran it cause somebody asked you to....
+all.lambdas = na.omit(all.lambdas)
+all.lambdas = subset(all.lambdas, Tissue != 'Kidney - Cortex')
+
 all.lambdas <- all.lambdas[order(all.lambdas$Lambda, decreasing = T), ]
-48000*0.05 
 
-
-all.lambdas <- na.omit(all.lambdas)
 all.lambdas$Lambda <- as.numeric(all.lambdas$Lambda)
 
 all.lambdas$Lambda[nrow(all.lambdas) * 0.05]
@@ -77,7 +79,7 @@ for (i in 1:length(all_tissues)){
   { print('This directory does not exist')} else{
     pvals = numeric()
     setwd(wdir)
-    for(x in 1:100){
+    for(x in 1:1000){
       filename <- paste0('perm.', x)
       cutoff <- as.data.frame(fread(filename))
       pvals=c(pvals, min(cutoff[,2]))

@@ -17,9 +17,9 @@ opts_knit$set(root.dir = wdir)
 
 # get Ns for each!
 ```{r}
-load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_objects/big.with.gene.w.samps.rds')
-load('R_objects/all.lambdas.rds')
-load('R_objects/lambda.frame.rds') 
+# load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_objects/big.with.gene.w.samps_1000.rds') # it might be too big??
+# load('R_objects/all.lambdas.rds')
+# load('R_objects/lambda.frame.rds') 
 
 # 
 # load('/dcs01/arking/arkinglab/active/projects/GTeX/syang/look.version8/R_objects/big.with.gene.w.samps.rds')

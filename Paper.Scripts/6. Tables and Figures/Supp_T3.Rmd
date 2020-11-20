@@ -1,5 +1,8 @@
+# 3.6.2020
+
 # This script will show the lambdas obtained from permutation along with actual lambdas for each tissue
 
+# It will also make a table for this
 ```{r setup}
 library(data.table)
 library(knitr)
@@ -9,12 +12,24 @@ opts_knit$set(root.dir = wdir)
 ```
 
 ```{r}
-load('R_objects/all.lambdas.rds') # from Calculate_lambdas.R
+load('R_objects/all.lambdas.rds') # made here: 
 load('R_objects/lambda.frame.rds') 
 
 library(ggplot2)
 ggplot(all.lambdas, aes(Lambda)) + geom_density() + geom_rug() + geom_rug(data = lambda.frame, aes(Lambda), col = 'blue') + geom_density(data = lambda.frame, aes(Lambda), col = 'blue') + geom_vline(xintercept = all.lambdas$Lambda[nrow(all.lambdas)*0.05], col = 'red')
 
 sig <- subset(lambda.frame, Lambda > all.lambdas$Lambda[nrow(all.lambdas)*0.05])
+
 nrow(sig)
+```
+
+# table time
+```{r}
+library(htmlTable)
+lambda.frame = na.omit(lambda.frame)
+lambda.frame$Lambda <- formatC(lambda.frame$Lambda, digits = 3) 
+
+lambda.frame$Test = NULL
+
+htmlTable(lambda.frame, header = c('Tissue', 'Lambda'), rnames = rep('', nrow(lambda.frame)))
 ```

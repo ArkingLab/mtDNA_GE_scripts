@@ -14,7 +14,6 @@ opts_knit$set(root.dir = wdir)
 ```{r}
 load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_objects/perm.beta.results.rds')
 load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_objects/spear.results.rds')
-load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_objects/sig.spear.tiss.rds')
 spear.results$Spear.Correlation = as.numeric(spear.results$Correlation)
 perm.beta.results$Spear.Correlation = as.numeric(perm.beta.results$Spear.Correlation)
 ```
@@ -45,7 +44,7 @@ which(w.perm$Spear.Correlation < w.perm$lowerCI | w.perm$Spear.Correlation > w.p
 
 sig = w.perm[which(w.perm$Spear.Correlation < w.perm$lowerCI | w.perm$Spear.Correlation > w.perm$upperCI),]
 
-dplyr::select(sig, Spear.Correlation, lowerCI, upperCI)
+dplyr::select(sig, Tissue, Spear.Correlation, lowerCI, upperCI)
 
 w.perm$Sig = ifelse(w.perm$Spear.Correlation < w.perm$lowerCI | w.perm$Spear.Correlation > w.perm$upperCI, 1, 0)
 
@@ -98,6 +97,7 @@ load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_objects/al
 lambda.cutoff <- all.lambdas$Lambda[nrow(all.lambdas) * 0.05] 
 sig.tissues <- subset(lambda.frame, Lambda > lambda.cutoff)
 
+sig$Tissue[which(sig$Tissue %in% sig.tissues$Tissue)]
 which(sig$Tissue %in% sig.tissues$Tissue) %>% length
 
 ```

@@ -3,7 +3,7 @@
 ###################################
 
 # load counts
-counts <- as.data.frame(fread('/dcs01/arking/arkinglab/resources/GTeX/v8_GTEx_counts/GTEx_Analysis_2017-06-05_v8_RNASeQCv1.1.9_gene_tpm.gct'))
+counts <- as.data.frame(fread('/dcs01/arking/arkinglab/resources/GTeX/v8_GTEx_counts/GTEx_Analysis_2017-06-05_v8_RNASeQCv1.1.9_gene_reads.gct'))
 
 # you need the new phenotype file!!
 phenotypes <- as.data.frame(fread('/dcs01/arking/arkinglab/resources/GTeX/dbGaP_GTEx_phs000424.v8.p2/files/GTEx_Analysis_2017-06-05_v8_Annotations_SampleAttributesDS.txt'))
