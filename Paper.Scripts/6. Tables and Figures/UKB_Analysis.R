@@ -14,8 +14,6 @@ library(knitr)
 ## Generate combined parkinsons and dementia (Neurodisease)
 ### check cases in each race group
 
-
-
 # data2<-readRDS("/dcl01/arking/data/static/UKBiobank/GWAS_data/analyses/mtDNA_CN/ukbPheno_10072020_genotypes.rds")
 data <-readRDS("/dcl01/arking/data/static/UKBiobank/GWAS_data/pheno/ukbPheno_09212020.rds")
 

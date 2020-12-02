@@ -5,6 +5,8 @@
 # load mtDNA-CN file
 ```{r}
 load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_objects/final.mito.rds')
+# load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/Whole Blood/subjids.rds')
+# final.mito = subset(final.mito, SUBJID %in% subjids$SUBJID)
 ```
 
 # Check BMI super quickly

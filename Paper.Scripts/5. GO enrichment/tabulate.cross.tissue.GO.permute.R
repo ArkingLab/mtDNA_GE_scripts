@@ -95,7 +95,7 @@ lookat <- lookat[order(lookat$Freq, decreasing = T),]
 lookgenes <- as.data.frame(table(big.sig.pathways$Gene.Set.Name))
 lookgenes <- lookgenes[order(lookgenes$Freq, decreasing = T),]
 
-load('/dcs01/arking/arkinglab/active/projects/GTeX/syang/look.version8/R_code/Cross.tissue.look/big.sig.pathways.permutecut.rds')
+load('/dcs01/arking/arkinglab/active/projects/GTeX/syang/look.version8/R_code/Cross.tissue.look/big.sig.pathways.permutecut_1000.rds')
 
 # Most often-appearing term:
 big.sig.pathways[grep('KEGG_RIBOSOME', big.sig.pathways$Gene.Set.Name),] # not in putamen

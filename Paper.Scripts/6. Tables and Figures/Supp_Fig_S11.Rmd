@@ -74,8 +74,8 @@ make.forestplot.go <- function(go.term, only.sig.tissues){
 	
 	# add meta to vectors
 	means <- c(NA, NA, NA, means, NA, m1$TE.random)
-	upper <- c(NA, NA, NA, upper, NA, m1$TE.random + m1$seTE.random)
-	lower <- c(NA, NA, NA, lower, NA, m1$TE.random - m1$seTE.random)
+	upper <- c(NA, NA, NA, upper, NA, m1$TE.random + (1.96*m1$seTE.random))
+	lower <- c(NA, NA, NA, lower, NA, m1$TE.random - (1.96*m1$seTE.random))
 
 		tval <- m1$TE.random/m1$seTE.random
   meta.pval <- 2*pt(abs(tval), m1$df.Q, lower=FALSE) 
