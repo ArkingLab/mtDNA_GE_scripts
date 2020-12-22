@@ -86,7 +86,7 @@ htmlTable(important,
                      "mtDNA transcription machinery",
                      "Nucleotide metabolism genes"),
           n.rgroup = c(1,8,4,4),
-          tfoot="&dagger; Genes from Rusecka et. al", compatability = 'htmlTableCompat')
+          tfoot="&dagger; Genes from Rusecka et. al")
 
 ```
 
