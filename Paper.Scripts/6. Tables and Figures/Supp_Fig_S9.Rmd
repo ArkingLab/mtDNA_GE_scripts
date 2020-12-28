@@ -70,15 +70,20 @@ title = ''
 	upper <- c(NA, NA, NA, upper, NA, m1$TE.random + (1.96*m1$seTE.random))
 	lower <- c(NA, NA, NA, lower, NA, m1$TE.random - (1.96*m1$seTE.random))
 
-gene.only$pval2 <- ifelse(gene.only$pval > 0.001, format(round(gene.only$pval, 3), nsmall = 3), formatC(gene.only$pval, format = "e", digits = 2))
-gene.only$pval2 <- ifelse(gene.only$pval > 0.05, format(round(gene.only$pval, 2), nsmall = 2), gene.only$pval2)
+# gene.only$pval2 <- ifelse(gene.only$pval > 0.001, format(round(gene.only$pval, 3), nsmall = 3), formatC(gene.only$pval, format = "e", digits = 2))
+# gene.only$pval2 <- ifelse(gene.only$pval > 0.05, format(round(gene.only$pval, 2), nsmall = 2), gene.only$pval2)
+	gene.only$pval3 = ifelse(gene.only$pval > 0.01, format(round(gene.only$pval,digits=2),nsmall=2), parse(text = paste0(substr(formatC(gene.only$pval,format="e",digits=2),0,4),"~ x ", "~ 10^{-",substr(formatC(gene.only$pval,format="e",digits=2),8,8),"}")))
+
 
 
 	# create table text
 xticks = seq(from = -0.05, to = 0.3, by = 0.05)
-	text <-cbind(c(paste0("Forestplot for ", gene), NA, "Tissue", gene.only$Tissue, NA, 'Summary (Random)'), 
+
+text <-list(c(paste0("Forestplot for ", gene), NA, "Tissue", gene.only$Tissue, NA, 'Summary (Random)'), 
 		c(NA, NA, 'N', gene.only$N, NA, NA), 
-		c(NA, NA,"Effect estimate", formatC(round(gene.only$beta, 2), 2, format = "f"), NA, formatC(round(m1$TE.random, 2), 2, format = "f")), 	c(NA, NA,"Standard error", formatC(round(gene.only$SE, 2), 2, format = "f"), NA, formatC(round(m1$seTE.random, 2), 2, format = "f")), c(NA, NA,"P-value", gene.only$pval2, NA, formatC(round(meta.pval, 3), 3, format = "f")))
+		c(NA, NA,"Effect estimate", formatC(round(gene.only$beta, 2), 2, format = "f"), NA, formatC(round(m1$TE.random, 2), 2, format = "f")), 	c(NA, NA,"Standard error", formatC(round(gene.only$SE, 2), 2, format = "f"), NA, formatC(round(m1$seTE.random, 2), 2, format = "f")), c(NA, NA,"P-value", "0.01", "0.02", "0.12", "0.13", "0.19", "0.22", "0.49", 
+    "0.56", "0.83", "0.74", "0.63", "0.44", "0.20", "0.15", "0.12", 
+    "0.09", "0.08", "0.03", expression(expression(2.47 ~ x ~ 10^{-3}), expression(3.31 ~ x ~ 10^{-4})), NA, formatC(round(meta.pval, 3), 3, format = "f")))
 
 	
 

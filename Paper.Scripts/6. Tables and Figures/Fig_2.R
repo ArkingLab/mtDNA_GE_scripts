@@ -82,7 +82,7 @@ ex <- one.data [ one.data$dispensability < 0.15, ];
 terms.include <- c('mitochondrion', 'ubiquitin ligase complex', 'spliceosomal complex', 'nucleoplasm part', 'catalytic complex', 'whole membrane', 'neuron part', 'envelope')
 ex <- subset(one.data, description %in% terms.include)
 
-p1 <- p1 + geom_text( data = ex, aes(plot_X, plot_Y, label = description), colour = I(alpha("black", 0.85)), size = 3 );
+p1 <- p1 + geom_text( data = ex, aes(plot_X, plot_Y, label = description), colour = I(alpha("black", 0.85)), size = 3.5);
 p1 <- p1 + labs (y = "semantic space y", x = "semantic space x");
 p1 <- p1 + theme(legend.key = element_blank()) ;
 one.x_range = max(one.data$plot_X) - min(one.data$plot_X);
@@ -93,8 +93,8 @@ p1 <- p1 + ylim(min(one.data$plot_Y)-one.y_range/10,max(one.data$plot_Y)+one.y_r
 # added to ex for readability:
 terms.include2 <- c('nuclear outer membrane-endoplasmic reticulum membrane network', 'cell projection cytoplasm', 'endosome', 'cilium')
 ex2 <- subset(one.data, description %in% terms.include2)
-p1 <- p1 + geom_text( data = ex2, aes(plot_X, plot_Y, label = description), colour = I(alpha("black", 0.85)), size = 3 );
+p1 <- p1 + geom_text( data = ex2, aes(plot_X, plot_Y, label = description), colour = I(alpha("black", 0.85)), size = 3.5);
 
 # remove the legend size and change color title....
-p1 + guides(size = F) + labs(col = 'log 10 P-value') + theme_classic()
+p1 + guides(size = F) + labs(col = 'log 10 P-value') + theme_classic()+ theme(axis.text=element_text(size=12), axis.title=element_text(size=14))
 

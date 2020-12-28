@@ -8,14 +8,15 @@ load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/Whole Blood/
 # Make a forestplot with all indiv genes
 ```{r}
 mt <- with.gene[grep('^MT-', with.gene$symbol),]
+# mt = mt[1:4,]
 
 require(forestplot)
 require(meta)
 
 # get means and upper/lower limits
 means <- mt$beta
-upper1 <- mt$beta+mt$SE
-lower1 <- mt$beta-mt$SE
+upper1 <- mt$beta+(1.96*mt$SE)
+lower1 <- mt$beta-(1.96*mt$SE)
 
 # formatting
 means <- c(NA, means, NA)
@@ -23,30 +24,79 @@ se <- c(NA, mt$SE, NA)
 upper <- c(NA, upper1, NA)
 lower <- c(NA, lower1, NA)
 
-# Dan wants p-value...
-mt$pval2 <- ifelse(mt$pval > 0.001, format(round(mt$pval, 3), nsmall = 3), formatC(mt$pval, format = "e", digits = 2))
-mt$pval2 <- ifelse(mt$pval > 0.05, format(round(mt$pval, 2), nsmall = 2), mt$pval2)
 
 
+pval.labels = c('`P-value`', ifelse(mt$pval > 0.01, format(round(mt$pval,digits=2),nsmall=2), parse(text = paste0(substr(formatC(mt$pval,format="e",digits=2),0,4),"~ x ", "~ 10^{-",substr(formatC(mt$pval,format="e",digits=2),8,8),"}"))), '`NA`')
+
+mt$pval3 = expression(ifelse(mt$pval > 0.01, format(round(mt$pval,digits=2),nsmall=2), parse(text = paste0(substr(formatC(mt$pval,format="e",digits=2),0,4),"~ x ", "~ 10^{-",substr(formatC(mt$pval,format="e",digits=2),8,8),"}"))))
+
+mt$pval3 = ifelse(mt$pval > 0.01, format(round(mt$pval,digits=2),nsmall=2), parse(text = paste0(substr(formatC(mt$pval,format="e",digits=2),0,4),"~ x ", "~ 10^{-",substr(formatC(mt$pval,format="e",digits=2),8,8),"}")))
+
+# full.string = c('', mt$pval, '')
+# full.string  = c("P-value", mt$pval3, NA)
 
 # create table text
-text <-cbind(c("MT-encoded genes", mt$symbol, NA), c("Effect estimate", formatC(round(mt$beta, 2), 2, format = "f"), NA), c("Standard error", formatC(round(mt$SE, 2), 2, format = "f"), NA), c("P-value", mt$pval2, NA))
+text <-list(c("MT-encoded genes", mt$symbol, NA), c("Effect estimate", formatC(round(mt$beta, 2), 2, format = "f"), NA), c("Standard error", formatC(round(mt$SE, 2), 2, format = "f"), NA), c('P-value', parse(text = mt$pval3), NA))
 
 
-	# draw forestplot
+# troubleshooting
+# text <-list(c("MT-encoded genes", mt$symbol, NA), c("Effect estimate", formatC(round(mt$beta, 2), 2, format = "f"), NA), c("Standard error", formatC(round(mt$SE, 2), 2, format = "f"), NA), c("P-value", expression(expression(2.31 ~ x ~ 10^{-9}), 'hi', expression(I^2), expression(Heterogeniety~I^2), expression(2.31 ~ x ~ 10^{-9}))))
+# 1
+
+# the hard way:
+text <-list(c("MT-encoded genes", mt$symbol, NA), c("Effect size estimate", formatC(round(mt$beta, 2), 2, format = "f"), NA), c("Standard error", formatC(round(mt$SE, 2), 2, format = "f"), NA), c("P-value", expression(expression(2.31 ~ x ~ 10^{-9}), expression(1.67 ~ x ~ 10^{-6}), expression(1.75 ~ x ~ 10^{-6}), expression(2.29 ~ x ~ 10^{-6}), expression(3.31 ~ x ~ 10^{-6}), expression(8.97 ~ x ~ 10^{-6}), expression(2.99 ~ x ~ 10^{-5}), expression(3.19 ~ x ~ 10^{-5}), expression(1.76 ~ x ~ 10^{-4}), expression(2.25 ~ x ~ 10^{-4}), expression(6.41 ~ x ~ 10^{-4}), expression(6.47 ~ x ~ 10^{-4}), expression(7.75 ~ x ~ 10^{-4}), expression(8.54 ~ x ~ 10^{-4}), expression(8.79 ~ x ~ 10^{-4}), expression(3.42 ~ x ~ 10^{-3}), expression(3.61 ~ x ~ 10^{-3}), 
+expression(4.00 ~ x ~ 10^{-3}), expression(4.62 ~ x ~ 10^{-3}), expression(6.44 ~ x ~ 10^{-3}), expression(8.83 ~ x ~ 10^{-3}), expression(8.97 ~ x ~ 10^{-3})), "0.01", "0.01", "0.02", "0.03", "0.04", "0.06", "0.06", "0.08", "0.10", "0.12", "0.14", "0.35", "0.37", "0.59", NA))
+
+
+forestplot(text, means, lower, upper)
+
+# RYANS CODE:
+# try = ifelse(fit1.ARIC.TOPMed$coef[1,5] > 0.01, format(round(fit1.ARIC.TOPMed$coef[1,5],digits=2),nsmall=2), parse(text = paste0(substr(formatC(fit1.ARIC.TOPMed$coef[1,5],format="e",digits=2),0,4),"~ x ", "~ 10^{-",substr(formatC(fit1.ARIC.TOPMed$coef[1,5],format="e",digits=2),8,8),"}")))
+
+# draw forestplot
 pdf(paste0('~/Desktop/mtrna.forestplot.pdf'), width = 10, height = 8, onefile = F)
-	
+
 xticks = seq(from = -0.05, to = 0.3, by = 0.05)
 
 forestplot(text, means, lower, upper, col=fpColors(box="royalblue",line="darkblue", summary="royalblue"), is.summary=c(TRUE, FALSE, FALSE, rep(FALSE, nrow(mt)+1), TRUE),
        txt_gp = fpTxtGp(ticks=gpar(cex=0.9), label = list(gpar(fontface = 3),
-                                     gpar(fontface = 1), gpar(fontface = 1), gpar(fontface = 1))), new_page = TRUE, xticks = xticks)
+      gpar(fontface = 1), gpar(fontface = 1), gpar(fontface = 1))), new_page = TRUE, xticks = xticks)
 
 dev.off()
+```
 
-mt.care <- dplyr::select(mt, symbol, beta, pval)
-mt.care$beta <- formatC(mt.care$beta, format = "e", digits = 2)
-mt.care$pval <- formatC(mt.care$pval, format = "e", digits = 2)
+# example
+```{r}
+cochrane_from_rmeta <- 
+structure(list(
+mean  = c(NA, NA, 0.578, 0.165, 0.246, 0.700, 0.348, 0.139, 1.017, NA, 0.531), 
+lower = c(NA, NA, 0.372, 0.018, 0.072, 0.333, 0.083, 0.016, 0.365, NA, 0.386),
+upper = c(NA, NA, 0.898, 1.517, 0.833, 1.474, 1.455, 1.209, 2.831, NA, 0.731)),
+.Names = c("mean", "lower", "upper"), 
+row.names = c(NA, -11L), 
+class = "data.frame")
 
-kable_styling(kable(mt.care, row.names = F), full_width = F)
+tabletext <- list(
+    list("", "Study", "Auckland", "Block", 
+        "Doran", "Gamsu", "Morrison", "Papageorgiou", 
+        "Tauesch", NA, "Summary"),
+    list("Deaths", "(steroid)", expression(2.31 ~ x ~ 10^{
+    -9}), "1", 
+        "4", "14", "3", "1", 
+        "8", NA, NA),
+    list("Deaths", "(placebo)", "60", "5", 
+        "11", "20", "7", "7", 
+        "10", NA, NA),
+    list("", "OR", "0.58", "0.16", 
+        "0.25", "0.70", "0.35", "0.14", 
+        "1.02", NA, "0.53"),
+    list("",NA,NA,NA,NA,NA,NA,NA,NA,NA, expression(Heterogeniety~I^2==20~'%')))
+
+
+forestplot(tabletext, 
+    cochrane_from_rmeta,new_page = TRUE,
+    is.summary=c(TRUE,TRUE,rep(FALSE,8),TRUE),
+    clip=c(0.1,2.5), 
+    xlog=TRUE, 
+    col=fpColors(box="royalblue",line="darkblue", summary="royalblue"))
 ```

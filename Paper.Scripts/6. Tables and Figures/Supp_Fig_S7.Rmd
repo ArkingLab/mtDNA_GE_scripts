@@ -44,6 +44,8 @@ save(w.tiss, file = '/dcs01/arking/arkinglab/active/projects/GTeX/syang/look.ver
 
 # local-side changes:
 load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_objects/scaled_mtRNA.rds')
+library(RColorBrewer)
+library(tidyverse)
 
 separate(w.tiss, SMTSD, sep = ' - ', into = c('bigtiss', 'litletiss'))-> try
 
@@ -57,7 +59,7 @@ getPalette = colorRampPalette(brewer.pal(8, "Set2"))
 
 # randomize colors
 set.seed(1)
-plot + scale_color_manual(values = sample(getPalette(colourCount)))
+plot + scale_color_manual(values = sample(getPalette(colourCount))) + theme(axis.text=element_text(size=10), axis.title=element_text(size=12))
 
 
 #  + theme(plot.margin=unit(c(1,1,1,1),"cm"))

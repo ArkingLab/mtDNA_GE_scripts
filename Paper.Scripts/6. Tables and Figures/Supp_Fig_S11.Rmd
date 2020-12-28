@@ -30,7 +30,7 @@ colnames(brain.results) = c('Gene.Set.Name', 'T.test.pval', 'Rank.t.test.pval', 
 
 for(i in 8:20){
   char = all_tissues[i]
-  load(paste0('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/', char, '/all.kegg.rds'))
+  load(paste0('/Volumes/JHPCE 1/dcs01/active/projects/GTeX/syang/look.version8/', char, '/all.kegg.rds'))
   hd = grep('^KEGG_HUNTINGTONS_DISEASE$', all.kegg.sets$Gene.Set.Name)
   ad = grep('^KEGG_ALZHEIMERS_DISEASE$', all.kegg.sets$Gene.Set.Name)
   pd = grep('^KEGG_PARKINSONS_DISEASE$', all.kegg.sets$Gene.Set.Name)
@@ -39,6 +39,10 @@ for(i in 8:20){
   brain.results = rbind(brain.results, nd)
 }
 brain.results = na.omit(brain.results)
+load('/Volumes/JHPCE 1/dcs01/active/projects/GTeX/syang/look.version8/R_objects/numsamps.rds')
+
+brain.results = merge(brain.results, numsamps, by.x = 'Tissue', by.y = 'tissue')
+
 ```
 
 # fp code:
@@ -100,10 +104,6 @@ text <-cbind(c(paste0("Forestplot for ", go.term), NA, "Tissue", go.term.only$Ti
 
 	# dev.off()
 }
-
-load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_objects/numsamps.rds')
-
-brain.results = merge(brain.results, numsamps, by.x = 'Tissue', by.y = 'tissue')
 ```
 
 
@@ -124,3 +124,201 @@ dev.off()
 
 ```
 
+
+# HD
+````{r}
+go.term = 'KEGG_HUNTINGTONS_DISEASE'
+only.sig.tissues = brain.results
+
+# required packages:
+require(forestplot)
+require(meta)
+
+# get effects for specific go.term:	
+go.term.only <- subset(only.sig.tissues, Gene.Set.Name == go.term) # 48 tissues --> but might not be same for every tissue!
+
+go.term.only$Beta <- as.numeric(go.term.only$Beta)  
+go.term.only <- go.term.only[order(go.term.only$Beta, decreasing = T),]
+go.term.only$Confint.Upper <- as.numeric(go.term.only$Confint.Upper)  
+go.term.only$Confint.Lower <- as.numeric(go.term.only$Confint.Lower)  
+
+# get means and upper/lower limits
+means <- go.term.only$Beta
+
+# the lower and upper confidence intervals are flipped (my bad)!
+lower <- go.term.only$Confint.Upper
+upper <- go.term.only$Confint.Lower
+
+go.term.only$SE <- go.term.only$Beta - go.term.only$Confint.Upper
+go.term.only$SE2 <- go.term.only$Confint.Lower - go.term.only$Beta
+dplyr::select(go.term.only, SE, SE2)
+# the lower and upper confidence intervals are flipped!
+
+# random effects meta-analysis, inverse variance weighted
+m1 <- metamean(go.term.only$samps, go.term.only$Beta, go.term.only$SE, comb.random = T)
+
+# add meta to vectors
+means <- c(NA, NA, NA, means, NA, m1$TE.random)
+upper <- c(NA, NA, NA, upper, NA, m1$TE.random + (1.96*m1$seTE.random))
+lower <- c(NA, NA, NA, lower, NA, m1$TE.random - (1.96*m1$seTE.random))
+
+tval <- m1$TE.random/m1$seTE.random
+meta.pval <- 2*pt(abs(tval), m1$df.Q, lower=FALSE) 
+
+go.term.only$pval = go.term.only$T.test.pval
+go.term.only$pval3 = ifelse(go.term.only$pval > 0.01, format(round(go.term.only$pval,digits=2),nsmall=2), parse(text = paste0(substr(formatC(go.term.only$pval,format="e",digits=2),0,4),"~ x ", "~ 10^{-",substr(formatC(go.term.only$pval,format="e",digits=2),8,8),"}")))
+
+# create table text
+xticks = seq(from = -0.5, to = 0.5, by = 0.25)
+
+text <-list(c(paste0("Forestplot for ", go.term), NA, "Tissue", go.term.only$Tissue, NA, 'Summary (Random)'), c(NA, NA, 'N', go.term.only$samps, NA, NA), 
+             c(NA, NA,"Effect estimate", formatC(round(go.term.only$Beta, 2), 2, format = "f"), NA, formatC(round(m1$TE.random, 2), 2, format = "f")), 	c(NA, NA,"Standard error", formatC(round(go.term.only$SE, 2), 2, format = "f"), NA, formatC(round(m1$seTE.random, 2), 2, format = "f")), c(NA, NA,"P-value", expression(expression(8.87 ~ x ~ 10^{-4}), expression(9.43 ~ x ~ 10^{-3})), "0.03", "0.25", "0.61", "0.35", "0.29", "0.23", expression(expression(7.71 ~ x ~ 10^{-3})), "0.12", "0.02", expression(expression(9.33 ~ x ~ 10^{-3}), expression(2.07 ~ x ~ 10^{-4})), NA, formatC(round(meta.pval, 3), 3, format = "f")))
+
+# create table text
+#	text <-cbind(c(paste0("Forestplot for ", go.term), NA, "Tissue", go.term.only$Tissue, NA, 'Summary (Random)'), 
+# c(NA, NA, 'N', go.term.only$samps, NA, NA), 
+# c(NA, NA,"Beta", formatC(go.term.only$Beta, format = "e", digits = 2), NA, formatC(m1$TE.random, format = "e", digits = 2)))
+
+# draw forestplot
+# pdf(paste0('/dcs01/arking/arkinglab/active/projects/GTeX/syang/look.version8/R_code/Cross.tissue.look/forestplots/', go.term.title, '.pdf'), width = 13.3, height = 7.5, onefile = F)
+forestplot(text, means, lower, upper, col=fpColors(box="royalblue",line="darkblue", summary="royalblue"), is.summary=c(TRUE, FALSE, TRUE, rep(FALSE, nrow(go.term.only)+1), TRUE), xticks=xticks, txt_gp = fpTxtGp(ticks=gpar(cex=0.9)))
+
+
+pdf(paste0('~/Desktop/HD.pdf'), width = 13.3, height = 3.5, onefile = F)
+forestplot(text, means, lower, upper, col=fpColors(box="royalblue",line="darkblue", summary="royalblue"), is.summary=c(TRUE, FALSE, TRUE, rep(FALSE, nrow(go.term.only)+1), TRUE), xticks=xticks, txt_gp = fpTxtGp(ticks=gpar(cex=0.9)))
+dev.off()
+```
+# AD
+```{r}
+go.term = 'KEGG_ALZHEIMERS_DISEASE'
+only.sig.tissues = brain.results
+
+# required packages:
+require(forestplot)
+require(meta)
+
+# get effects for specific go.term:	
+go.term.only <- subset(only.sig.tissues, Gene.Set.Name == go.term) # 48 tissues --> but might not be same for every tissue!
+
+go.term.only$Beta <- as.numeric(go.term.only$Beta)  
+go.term.only <- go.term.only[order(go.term.only$Beta, decreasing = T),]
+go.term.only$Confint.Upper <- as.numeric(go.term.only$Confint.Upper)  
+go.term.only$Confint.Lower <- as.numeric(go.term.only$Confint.Lower)  
+
+# get means and upper/lower limits
+means <- go.term.only$Beta
+
+# the lower and upper confidence intervals are flipped (my bad)!
+lower <- go.term.only$Confint.Upper
+upper <- go.term.only$Confint.Lower
+
+go.term.only$SE <- go.term.only$Beta - go.term.only$Confint.Upper
+go.term.only$SE2 <- go.term.only$Confint.Lower - go.term.only$Beta
+dplyr::select(go.term.only, SE, SE2)
+# the lower and upper confidence intervals are flipped!
+
+# random effects meta-analysis, inverse variance weighted
+m1 <- metamean(go.term.only$samps, go.term.only$Beta, go.term.only$SE, comb.random = T)
+
+# add meta to vectors
+means <- c(NA, NA, NA, means, NA, m1$TE.random)
+upper <- c(NA, NA, NA, upper, NA, m1$TE.random + (1.96*m1$seTE.random))
+lower <- c(NA, NA, NA, lower, NA, m1$TE.random - (1.96*m1$seTE.random))
+
+tval <- m1$TE.random/m1$seTE.random
+meta.pval <- 2*pt(abs(tval), m1$df.Q, lower=FALSE) 
+
+go.term.only$pval = go.term.only$T.test.pval
+go.term.only$pval3 = ifelse(go.term.only$pval > 0.01, format(round(go.term.only$pval,digits=2),nsmall=2), parse(text = paste0(substr(formatC(go.term.only$pval,format="e",digits=2),0,4),"~ x ", "~ 10^{-",substr(formatC(go.term.only$pval,format="e",digits=2),8,8),"}")))
+
+# create table text
+xticks = seq(from = -0.5, to = 0.5, by = 0.25)
+
+text <-list(c(paste0("Forestplot for ", go.term), NA, "Tissue", go.term.only$Tissue, NA, 'Summary (Random)'), c(NA, NA, 'N', go.term.only$samps, NA, NA), 
+             c(NA, NA,"Effect estimate", formatC(round(go.term.only$Beta, 2), 2, format = "f"), NA, formatC(round(m1$TE.random, 2), 2, format = "f")), 	c(NA, NA,"Standard error", formatC(round(go.term.only$SE, 2), 2, format = "f"), NA, formatC(round(m1$seTE.random, 2), 2, format = "f")), c(NA, NA,"P-value", expression(expression(1.03 ~ x ~ 10^{-4}), expression(8.07 ~ x ~ 10^{-3})), "0.17", "0.39", "0.56", "0.77", "0.94", "0.40", "0.23", "0.26", 
+    "0.11", "0.26", "0.01", NA, formatC(round(meta.pval, 3), 3, format = "f")))
+
+# create table text
+#	text <-cbind(c(paste0("Forestplot for ", go.term), NA, "Tissue", go.term.only$Tissue, NA, 'Summary (Random)'), 
+# c(NA, NA, 'N', go.term.only$samps, NA, NA), 
+# c(NA, NA,"Beta", formatC(go.term.only$Beta, format = "e", digits = 2), NA, formatC(m1$TE.random, format = "e", digits = 2)))
+
+# draw forestplot
+# pdf(paste0('/dcs01/arking/arkinglab/active/projects/GTeX/syang/look.version8/R_code/Cross.tissue.look/forestplots/', go.term.title, '.pdf'), width = 13.3, height = 7.5, onefile = F)
+forestplot(text, means, lower, upper, col=fpColors(box="royalblue",line="darkblue", summary="royalblue"), is.summary=c(TRUE, FALSE, TRUE, rep(FALSE, nrow(go.term.only)+1), TRUE), xticks=xticks, txt_gp = fpTxtGp(ticks=gpar(cex=0.9)))
+
+
+pdf(paste0('~/Desktop/AD.pdf'), width = 13.3, height = 3.5, onefile = F)
+forestplot(text, means, lower, upper, col=fpColors(box="royalblue",line="darkblue", summary="royalblue"), is.summary=c(TRUE, FALSE, TRUE, rep(FALSE, nrow(go.term.only)+1), TRUE), xticks=xticks, txt_gp = fpTxtGp(ticks=gpar(cex=0.9)))
+dev.off()
+```
+
+
+# PD
+```{r}
+go.term = 'KEGG_PARKINSONS_DISEASE'
+only.sig.tissues = brain.results
+
+# required packages:
+require(forestplot)
+require(meta)
+
+# get effects for specific go.term:	
+go.term.only <- subset(only.sig.tissues, Gene.Set.Name == go.term) # 48 tissues --> but might not be same for every tissue!
+
+go.term.only$Beta <- as.numeric(go.term.only$Beta)  
+go.term.only <- go.term.only[order(go.term.only$Beta, decreasing = T),]
+go.term.only$Confint.Upper <- as.numeric(go.term.only$Confint.Upper)  
+go.term.only$Confint.Lower <- as.numeric(go.term.only$Confint.Lower)  
+
+# get means and upper/lower limits
+means <- go.term.only$Beta
+
+# the lower and upper confidence intervals are flipped (my bad)!
+lower <- go.term.only$Confint.Upper
+upper <- go.term.only$Confint.Lower
+
+go.term.only$SE <- go.term.only$Beta - go.term.only$Confint.Upper
+go.term.only$SE2 <- go.term.only$Confint.Lower - go.term.only$Beta
+dplyr::select(go.term.only, SE, SE2)
+# the lower and upper confidence intervals are flipped!
+
+# random effects meta-analysis, inverse variance weighted
+m1 <- metamean(go.term.only$samps, go.term.only$Beta, go.term.only$SE, comb.random = T)
+
+# add meta to vectors
+means <- c(NA, NA, NA, means, NA, m1$TE.random)
+upper <- c(NA, NA, NA, upper, NA, m1$TE.random + (1.96*m1$seTE.random))
+lower <- c(NA, NA, NA, lower, NA, m1$TE.random - (1.96*m1$seTE.random))
+
+tval <- m1$TE.random/m1$seTE.random
+meta.pval <- 2*pt(abs(tval), m1$df.Q, lower=FALSE) 
+
+go.term.only$pval = go.term.only$T.test.pval
+go.term.only$pval3 = ifelse(go.term.only$pval > 0.01, format(round(go.term.only$pval,digits=2),nsmall=2), parse(text = paste0(substr(formatC(go.term.only$pval,format="e",digits=2),0,4),"~ x ", "~ 10^{-",substr(formatC(go.term.only$pval,format="e",digits=2),8,8),"}")))
+
+# create table text
+xticks = seq(from = -0.5, to = 0.5, by = 0.25)
+
+text <-list(c(paste0("Forestplot for ", go.term), NA, "Tissue", go.term.only$Tissue, NA, 'Summary (Random)'), c(NA, NA, 'N', go.term.only$samps, NA, NA), 
+             c(NA, NA,"Effect estimate", formatC(round(go.term.only$Beta, 2), 2, format = "f"), NA, formatC(round(m1$TE.random, 2), 2, format = "f")), 	c(NA, NA,"Standard error", formatC(round(go.term.only$SE, 2), 2, format = "f"), NA, formatC(round(m1$seTE.random, 2), 2, format = "f")), c(NA, NA,"P-value", expression(expression(2 ~ x ~ 10^{-4}), expression(9.07 ~ x ~ 10^{-3})), "0.01", "0.24", "0.61", "0.89", "0.67", "0.33", "0.04", "0.01", expression(expression(3.84 ~ x ~ 10^{-3})), "0.04", expression(expression(3.62 ~ x ~ 10^{-4})), NA, formatC(round(meta.pval, 3), 3, format = "f")))
+
+# create table text
+#	text <-cbind(c(paste0("Forestplot for ", go.term), NA, "Tissue", go.term.only$Tissue, NA, 'Summary (Random)'), 
+# c(NA, NA, 'N', go.term.only$samps, NA, NA), 
+# c(NA, NA,"Beta", formatC(go.term.only$Beta, format = "e", digits = 2), NA, formatC(m1$TE.random, format = "e", digits = 2)))
+
+# draw forestplot
+# pdf(paste0('/dcs01/arking/arkinglab/active/projects/GTeX/syang/look.version8/R_code/Cross.tissue.look/forestplots/', go.term.title, '.pdf'), width = 13.3, height = 7.5, onefile = F)
+forestplot(text, means, lower, upper, col=fpColors(box="royalblue",line="darkblue", summary="royalblue"), is.summary=c(TRUE, FALSE, TRUE, rep(FALSE, nrow(go.term.only)+1), TRUE), xticks=xticks, txt_gp = fpTxtGp(ticks=gpar(cex=0.9)))
+
+
+pdf(paste0('~/Desktop/PD.pdf'), width = 13.3, height = 3.5, onefile = F)
+forestplot(text, means, lower, upper, col=fpColors(box="royalblue",line="darkblue", summary="royalblue"), is.summary=c(TRUE, FALSE, TRUE, rep(FALSE, nrow(go.term.only)+1), TRUE), xticks=xticks, txt_gp = fpTxtGp(ticks=gpar(cex=0.9)))
+dev.off()
+
+
+
+
+
+```
