@@ -9,7 +9,7 @@
 
 #### load data
 ```{r}
-load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/Whole Blood/with.gene.rds')
+load('projects/GTeX/syang/look.version8/Whole Blood/with.gene.rds')
 
 load('/Volumes/JHPCE/dcs01/resources/ensembl/only.care.rds') # made in /dcs01/arking/arkinglab/resources/ensembl/try.read.R
 w.annot <- merge(only.care, with.gene, by = 'gene_id') # 23758 yay
@@ -28,7 +28,7 @@ with.gene <- subset(w.annot, gene_type %!in% pseudo.types)
 
 # 1. plot distribution
 ```{r}
-load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/Whole Blood/with.gene.rds')
+load('projects/GTeX/syang/look.version8/Whole Blood/with.gene.rds')
 
 library(ggplot2)
 ggplot(with.gene, aes(t_value)) + geom_rug() + geom_density() 
@@ -90,7 +90,7 @@ kegg.sets <- read.gmt('/Volumes/JHPCE 1/dcs01/active/projects/GTeX/syang/look.ve
 #   }
 # }
 # save(carry.annot, file = '/Volumes/JHPCE 1/dcs01/active/projects/GTeX/syang/look.version8/Whole Blood/carry.annot.rds')
-load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/Whole Blood/carry.annot.rds')
+load('projects/GTeX/syang/look.version8/Whole Blood/carry.annot.rds')
 ```
 
 # 2.75 check

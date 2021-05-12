@@ -10,14 +10,14 @@
 library(data.table)
 library(knitr)
 library(meta)
-wdir <- paste0('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/')
+wdir <- paste0('projects/GTeX/syang/look.version8/')
 setwd(wdir)
 opts_knit$set(root.dir = wdir)
 ```
 
 # get Ns for each!
 ```{r}
-load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_objects/elk1.only.rds') # it might be too big??
+load('projects/GTeX/syang/look.version8/R_objects/elk1.only.rds') # it might be too big??
 # load('R_objects/all.lambdas.rds')
 # load('R_objects/lambda.frame.rds') 
 
@@ -29,7 +29,7 @@ load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_objects/el
 
 ```{r}
 library(qusage)
-tft.sets <- read.gmt('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/GO_enrich/MsigDB/c3.tft.v7.0.symbols.gmt')
+tft.sets <- read.gmt('projects/GTeX/syang/look.version8/GO_enrich/MsigDB/c3.tft.v7.0.symbols.gmt')
 ```
 
 

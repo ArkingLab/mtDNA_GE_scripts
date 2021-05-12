@@ -1,7 +1,7 @@
 
 # load with.gene.rds
 ```{r}
-load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/Whole Blood/with.gene.rds')
+load('projects/GTeX/syang/look.version8/Whole Blood/with.gene.rds')
 ```
 
 

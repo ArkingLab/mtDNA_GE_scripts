@@ -1,13 +1,13 @@
 # updated 4.20.2020
 # 3.9.2020
 
-# This script will look at GO pathways significant in multiple tissues! Adapted from /Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/GO_enrich/Test.GO.all.tissues/tabulate.cross.tissue.GO.nopseudo.R
+# This script will look at GO pathways significant in multiple tissues! Adapted from projects/GTeX/syang/look.version8/GO_enrich/Test.GO.all.tissues/tabulate.cross.tissue.GO.nopseudo.R
 ```{r setup}
 library(data.table)
 library(knitr)
 library(ggplot2)
 library(magrittr)
-wdir <- paste0('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/')
+wdir <- paste0('projects/GTeX/syang/look.version8/')
 setwd(wdir)
 opts_knit$set(root.dir = wdir)
 ```
@@ -20,9 +20,9 @@ opts_knit$set(root.dir = wdir)
 # source('/Volumes/JHPCE/dcs01/users/syang/libLoad.R')
 # 
 # # load full list of tissues
-# load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_objects/all_tissuesv8.rds')
+# load('projects/GTeX/syang/look.version8/R_objects/all_tissuesv8.rds')
 # 
-# load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/Whole Blood/sig.pathways.nopseudo.permutecut.rds')
+# load('projects/GTeX/syang/look.version8/Whole Blood/sig.pathways.nopseudo.permutecut.rds')
 # big.sig.pathways <- all.results
 # big.sig.pathways$Tissue <- 'Whole Blood'
 # 
@@ -30,7 +30,7 @@ opts_knit$set(root.dir = wdir)
 # 
 # for (i in 1:length(all_tissues)){
 # 	char <- all_tissues[i]
-# 	wd <- paste0('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/', char)
+# 	wd <- paste0('projects/GTeX/syang/look.version8/', char)
 # 	if(file.exists(paste0(wd, '/sig.pathways.nopseudo.permutecut.rds'))){
 # 		load(paste0(wd, '/sig.pathways.nopseudo.permutecut.rds'))
 # 	  if(nrow(all.results) == 0){}else{
@@ -39,22 +39,22 @@ opts_knit$set(root.dir = wdir)
 # 	}
 # }
 # 
-# save(big.sig.pathways, file = '/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_code/Cross.tissue.look/big.sig.pathways.nopseudo.permutecut.rds')
+# save(big.sig.pathways, file = 'projects/GTeX/syang/look.version8/R_code/Cross.tissue.look/big.sig.pathways.nopseudo.permutecut.rds')
 
-load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_code/Cross.tissue.look/big.sig.pathways.permutecut_1000.rds')
+load('projects/GTeX/syang/look.version8/R_code/Cross.tissue.look/big.sig.pathways.permutecut_1000.rds')
 ```
 
 # limit to only tissues with significant GIF
 ```{r}
 # limit this so only looking at tissues with significant GIF
-load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_objects/lambda.frame.rds')
-load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_objects/all.lambdas.rds')
+load('projects/GTeX/syang/look.version8/R_objects/lambda.frame.rds')
+load('projects/GTeX/syang/look.version8/R_objects/all.lambdas.rds')
 lambda.cutoff <- all.lambdas$Lambda[nrow(all.lambdas) * 0.05] 
 
 sig.tissues <- subset(lambda.frame, Lambda > lambda.cutoff)
 
 only.sig.tissues <- subset(big.sig.pathways, Tissue %in% sig.tissues$Tissue)
-save(only.sig.tissues, file = '/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_code/Cross.tissue.look/only.sig.tissues_1000.rds')
+save(only.sig.tissues, file = 'projects/GTeX/syang/look.version8/R_code/Cross.tissue.look/only.sig.tissues_1000.rds')
 ```
 
 # pathways significant in multiple tissues

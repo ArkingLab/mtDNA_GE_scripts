@@ -4,7 +4,7 @@
 library(ggplot2)
 library(yangR)
 library(analyzeR)
-load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_objects/final.mito.rds')
+load('projects/GTeX/syang/look.version8/R_objects/final.mito.rds')
 ```
 # density plot of transformed and untransformed mtDNA-CN
 ```{r}
@@ -20,7 +20,7 @@ unt + t
 
 # How many genes passed permutation cutoff that were positive?
 ```{r}
-load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/Whole Blood/with.gene.rds')
+load('projects/GTeX/syang/look.version8/Whole Blood/with.gene.rds')
 sig = subset(with.gene, pval < 2.7e-6)
 sig$dir = ifelse(sig$beta > 0, 'Pos', 'Neg')
 table(sig$dir)
@@ -29,7 +29,7 @@ table(sig$dir)
 
 # Check 1000
 ```{r}
-setwd('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/new.permutation.method/Whole Blood/')
+setwd('projects/GTeX/syang/look.version8/new.permutation.method/Whole Blood/')
 pval = list.files()
 pval = pval[-grep('perm.beta', pval)]
 pval = pval[1:1000]
@@ -82,11 +82,11 @@ ggplot(clean.data, aes(age, resid.mtDNA)) + geom_point() + theme_classic() + geo
 
 # Show results with and without INT:
 ```{r}
-load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/Whole Blood/with.gene.noINT.rds')
+load('projects/GTeX/syang/look.version8/Whole Blood/with.gene.noINT.rds')
 no.int = with.gene
-load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/Whole Blood/with.gene.rds')
+load('projects/GTeX/syang/look.version8/Whole Blood/with.gene.rds')
 int = with.gene
-load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/Whole Blood/with.gene.noSCALE.rds')
+load('projects/GTeX/syang/look.version8/Whole Blood/with.gene.noSCALE.rds')
 noscale = with.gene
 
 both = merge(noscale, int, by = 'gene_id', suffixes = c('_scale', '_no_scale'))

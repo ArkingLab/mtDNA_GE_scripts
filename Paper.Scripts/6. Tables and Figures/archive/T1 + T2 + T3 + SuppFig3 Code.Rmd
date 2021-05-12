@@ -9,7 +9,7 @@
 
 # load with.gene.rds
 ```{r}
-load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/Whole Blood/with.gene.rds')
+load('projects/GTeX/syang/look.version8/Whole Blood/with.gene.rds')
 
 
 with.gene[grep('^PPARGC1A$', with.gene$symbol),]
@@ -39,7 +39,7 @@ slc <- with.gene[grep('^SLC25A4$', with.gene$symbol),]
 
 lonp <- with.gene[grep('^LONP1$', with.gene$symbol),]
 
-load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_objects/rna.dna.cor.SCALED.rds')
+load('projects/GTeX/syang/look.version8/R_objects/rna.dna.cor.SCALED.rds')
 blood <- subset(rna.dna.cor, Tissue == 'Whole Blood')
 blood$symbol <- 'Scaled mtRNA median'
 
@@ -93,7 +93,7 @@ htmlTable(important,
 # show genes splice/ubq
 ```{r}
 library(qusage)
-kegg.sets <- read.gmt('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/GO_enrich/MsigDB/c2.cp.kegg.v7.0.symbols.gmt')
+kegg.sets <- read.gmt('projects/GTeX/syang/look.version8/GO_enrich/MsigDB/c2.cp.kegg.v7.0.symbols.gmt')
 
 grep('^KEGG_SPLICEOSOME$', names(kegg.sets))
 grep('^KEGG_UBIQUITIN_MEDIATED_PROTEOLYSIS$', names(kegg.sets))
@@ -125,7 +125,7 @@ htmlTable(important,
 
 # show tf (transcription factor) effects + grab enrichment score:
 ```{r}
-load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/Whole Blood/all.tft.rds')
+load('projects/GTeX/syang/look.version8/Whole Blood/all.tft.rds')
 all.tft.sets$se = as.numeric(all.tft.sets$Beta) - (1.96*as.numeric(all.tft.sets$Confint.Upper))
 
 tf.scores = head(dplyr::select(all.tft.sets, Gene.Set.Name, T.test.pval, Beta, se), 15)

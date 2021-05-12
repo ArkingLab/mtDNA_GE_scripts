@@ -6,7 +6,7 @@
 library(data.table)
 library(knitr)
 library(meta)
-wdir <- paste0('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/')
+wdir <- paste0('projects/GTeX/syang/look.version8/')
 setwd(wdir)
 opts_knit$set(root.dir = wdir)
 ```
@@ -15,7 +15,7 @@ opts_knit$set(root.dir = wdir)
 # What genes are driving HD?
 ```{r}
 library(qusage)
-kegg.sets <- read.gmt('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/GO_enrich/MsigDB/c2.cp.kegg.v7.0.symbols.gmt')
+kegg.sets <- read.gmt('projects/GTeX/syang/look.version8/GO_enrich/MsigDB/c2.cp.kegg.v7.0.symbols.gmt')
 hd.genes <- kegg.sets[[grep('^KEGG_HUNTINGTONS_DISEASE$', names(kegg.sets))]]
 pd.genes <- kegg.sets[[grep('^KEGG_PARKINSONS_DISEASE$', names(kegg.sets))]]
 ad.genes <- kegg.sets[[grep('^KEGG_ALZHEIMERS_DISEASE$', names(kegg.sets))]]
@@ -23,14 +23,14 @@ ad.genes <- kegg.sets[[grep('^KEGG_ALZHEIMERS_DISEASE$', names(kegg.sets))]]
 
 # make a giant forestplot with brain tissues
 ```{r}
-load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_objects/all_tissuesv8.rds')
+load('projects/GTeX/syang/look.version8/R_objects/all_tissuesv8.rds')
 
 brain.results = as.data.frame(matrix(nrow = 1, ncol = 8))
 colnames(brain.results) = c('Gene.Set.Name', 'T.test.pval', 'Rank.t.test.pval', 'Num.genes.in.set', 'Beta', 'Confint.Upper', 'Confint.Lower', 'Tissue')
 
 for(i in 8:20){
   char = all_tissues[i]
-  load(paste0('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/', char, '/all.kegg.rds'))
+  load(paste0('projects/GTeX/syang/look.version8/', char, '/all.kegg.rds'))
   hd = grep('^KEGG_HUNTINGTONS_DISEASE$', all.kegg.sets$Gene.Set.Name)
   ad = grep('^KEGG_ALZHEIMERS_DISEASE$', all.kegg.sets$Gene.Set.Name)
   pd = grep('^KEGG_PARKINSONS_DISEASE$', all.kegg.sets$Gene.Set.Name)
@@ -101,7 +101,7 @@ text <-cbind(c(paste0("Forestplot for ", go.term), NA, "Tissue", go.term.only$Ti
 	# dev.off()
 }
 
-load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_objects/numsamps.rds')
+load('projects/GTeX/syang/look.version8/R_objects/numsamps.rds')
 
 brain.results = merge(brain.results, numsamps, by.x = 'Tissue', by.y = 'tissue')
 ```

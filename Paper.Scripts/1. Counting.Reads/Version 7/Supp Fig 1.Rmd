@@ -8,7 +8,7 @@ library(yangR)
 library(data.table)
 library(ggplot2)
 
-wd <- '/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/'
+wd <- 'projects/GTeX/syang/'
 
 setwd(wd)
 opts_knit$set(root.dir = wd)
@@ -75,7 +75,7 @@ plot(density(only_whole_blood5$mito_percents))
 ```{r}
 # SUBJECT
 getwd()
-phenotype <- read_delim("/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/data_files/GTEx_v7_Subject_Phenotypes.GRU.n635_AnalysisFreeze.txt", "\t", escape_double = FALSE, trim_ws = TRUE)
+phenotype <- read_delim("projects/GTeX/syang/data_files/GTEx_v7_Subject_Phenotypes.GRU.n635_AnalysisFreeze.txt", "\t", escape_double = FALSE, trim_ws = TRUE)
 
 '%!in%' <- Negate('%in%')
 no.subj.phenos <- which(only_whole_blood4$submitted_subject_id %!in% phenotype$SUBJID)

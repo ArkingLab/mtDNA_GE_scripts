@@ -2,14 +2,14 @@
 
 # This will show the percent positive shift
 ```{r}
-load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_objects/permute.pos.blood1000.rds')
+load('projects/GTeX/syang/look.version8/R_objects/permute.pos.blood1000.rds')
 library(ggplot2)
 library(yangR)
 subset(permute.pos, tissue == 'Whole Blood') -> blood
 
 # ggplot(blood, aes(percent.pos)) + geom_density() + geom_rug()
 
-load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/Whole Blood/with.gene.rds')
+load('projects/GTeX/syang/look.version8/Whole Blood/with.gene.rds')
 with.gene$Pos = ifelse(with.gene$beta > 0, 1, 0)
 sig = subset(with.gene, pval < 0.05)
 table(sig$Pos)

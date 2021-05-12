@@ -19,7 +19,7 @@ library(knitr)
 
 
 ```{r data, echo=FALSE, cache=TRUE}
-data<-readRDS("/dcl01/arking/data/static/UKBiobank/GWAS_data/pheno/ukbPheno_05052020.rds")
+data<-readRDS("/static/UKBiobank/GWAS_data/pheno/ukbPheno_05052020.rds")
 # data<-readRDS("C:/Users/darking/Desktop/UKB/phenotypes/ukbPheno_05052020.rds")
 ##include ethnicity
 data$race<-fct_collapse(data$ethnicity,

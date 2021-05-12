@@ -10,14 +10,14 @@
 library(data.table)
 library(knitr)
 library(meta)
-wdir <- paste0('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/')
+wdir <- paste0('projects/GTeX/syang/look.version8/')
 setwd(wdir)
 opts_knit$set(root.dir = wdir)
 ```
 
 # get Ns for each!
 ```{r}
-# load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_objects/big.with.gene.w.samps_1000.rds') # it might be too big??
+# load('projects/GTeX/syang/look.version8/R_objects/big.with.gene.w.samps_1000.rds') # it might be too big??
 # load('R_objects/all.lambdas.rds')
 # load('R_objects/lambda.frame.rds') 
 
@@ -34,9 +34,9 @@ only.sig <- subset(w.samps, tissue %in% sig$Tissue)
 # What genes are driving HD?
 ```{r}
 library(qusage)
-kegg.sets <- read.gmt('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/GO_enrich/MsigDB/c2.cp.kegg.v7.0.symbols.gmt')
-tft.sets <- read.gmt('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/GO_enrich/MsigDB/c3.tft.v7.0.symbols.gmt')
-go.sets <- read.gmt('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/GO_enrich/MsigDB/c5.all.v7.0.symbols.gmt')
+kegg.sets <- read.gmt('projects/GTeX/syang/look.version8/GO_enrich/MsigDB/c2.cp.kegg.v7.0.symbols.gmt')
+tft.sets <- read.gmt('projects/GTeX/syang/look.version8/GO_enrich/MsigDB/c3.tft.v7.0.symbols.gmt')
+go.sets <- read.gmt('projects/GTeX/syang/look.version8/GO_enrich/MsigDB/c5.all.v7.0.symbols.gmt')
 
 
 index = grep('^KEGG_HUNTINGTONS_DISEASE$', names(kegg.sets))
@@ -69,7 +69,7 @@ rna <- rna[order(rna$meta.pval),]
 
 # so just match genes from here instead!
 # '/dcs01/arking/arkinglab/active/projects/GTeX/syang/look.version8/R_objects/meta.vals.rds'
-load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_objects/meta.vals.rds')
+load('projects/GTeX/syang/look.version8/R_objects/meta.vals.rds')
 meta.vals$stderr = meta.vals$meta.beta/as.numeric(meta.vals$meta.tval)
 ```
 

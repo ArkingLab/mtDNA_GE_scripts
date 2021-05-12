@@ -5,15 +5,15 @@
 ```{r setup}
 library(data.table)
 library(knitr)
-wdir <- paste0('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/')
+wdir <- paste0('projects/GTeX/syang/look.version8/')
 setwd(wdir)
 opts_knit$set(root.dir = wdir)
 ```
 
 # load stuff
 ```{r}
-load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_objects/perm.beta.results.rds')
-load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_objects/spear.results.rds')
+load('projects/GTeX/syang/look.version8/R_objects/perm.beta.results.rds')
+load('projects/GTeX/syang/look.version8/R_objects/spear.results.rds')
 spear.results$Spear.Correlation = as.numeric(spear.results$Correlation)
 perm.beta.results$Spear.Correlation = as.numeric(perm.beta.results$Spear.Correlation)
 ```
@@ -91,8 +91,8 @@ htmlTable(show,
           rnames = rep('', nrow(show)))
 
 # Check if these are all significant lambdas!?
-load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_objects/lambda.frame.rds')
-load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_objects/all.lambdas.rds')
+load('projects/GTeX/syang/look.version8/R_objects/lambda.frame.rds')
+load('projects/GTeX/syang/look.version8/R_objects/all.lambdas.rds')
 
 lambda.cutoff <- all.lambdas$Lambda[nrow(all.lambdas) * 0.05] 
 sig.tissues <- subset(lambda.frame, Lambda > lambda.cutoff)

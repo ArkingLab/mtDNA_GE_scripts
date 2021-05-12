@@ -1,4 +1,4 @@
-data <-readRDS("/dcl01/arking/data/static/UKBiobank/GWAS_data/pheno/ukbPheno_09212020.rds")
+data <-readRDS("/static/UKBiobank/GWAS_data/pheno/ukbPheno_09212020.rds")
 
 # cool they are the same
 # identical(data$arrayCN_PCAodd_m1, data2$arrayCN_PCAodd_m1)

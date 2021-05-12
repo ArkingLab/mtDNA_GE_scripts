@@ -8,15 +8,15 @@ library(knitr)
 library(meta)
 library(htmlTable)
 library(yangR)
-wdir <- paste0('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/')
+wdir <- paste0('projects/GTeX/syang/look.version8/')
 setwd(wdir)
 opts_knit$set(root.dir = wdir)
 ```
 
 # load results files
 ```{r}
-load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_objects/UKB/show_inc.rds')
-load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_objects/UKB/show_prev.rds')
+load('projects/GTeX/syang/look.version8/R_objects/UKB/show_inc.rds')
+load('projects/GTeX/syang/look.version8/R_objects/UKB/show_prev.rds')
 ```
 
 # format for an htmlTable
@@ -49,7 +49,7 @@ htmlTable(rbind(show_prev[,c(1, 2, 7, 5, 6)], show_inc[,c(1, 2, 7, 5, 6)]), rnam
 
 # For reviewers:
 ```{r}
-load('/Volumes/JHPCE/dcs01/active/projects/GTeX/syang/look.version8/R_objects/UKB/show_inc_all.rds')
+load('projects/GTeX/syang/look.version8/R_objects/UKB/show_inc_all.rds')
 
 
 formatbeta <- function (beta) 
